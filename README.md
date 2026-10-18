@@ -631,7 +631,7 @@ cd frontend
 npm install
 cd ..
 
-# Recompila el backend (descarga todo de nuevo en ~/.m2, no se toca)
+# Recompila el backend (descarga todo de nuevo)
 
 cd backend
 mvn clean compile "-Dmaven.test.skip=true"
