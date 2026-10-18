@@ -1,0 +1,35 @@
+# Normalizar finales de línea: todo a LF en el repo y en el working tree
+* text=auto eol=lf
+
+# Archivos de texto → LF (sin conversión a CRLF en Windows)
+*.java      text eol=lf
+*.jsx       text eol=lf
+*.js        text eol=lf
+*.ts        text eol=lf
+*.css       text eol=lf
+*.html      text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.properties text eol=lf
+*.sql       text eol=lf
+*.sh        text eol=lf
+*.env       text eol=lf
+*.gitignore text eol=lf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+*.ps1       text eol=crlf
+
+# Archivos binarios (sin tocar finales de línea)
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.webp      binary
+*.svg       text eol=lf
+*.ico       binary
+*.pdf       binary
+*.zip       binary
+*.jar       binary
+*.svg       binary

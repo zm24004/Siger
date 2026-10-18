@@ -1,0 +1,181 @@
+#!/bin/sh
+# ----------------------------------------------------------------------------
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+# Apache Maven Wrapper startup batch script, version 3.3.2
+# Maven Wrapper 3.3.2+ can run WITHOUT the maven-wrapper.jar (uses the
+# distributionUrl from .mvn/wrapper/maven-wrapper.properties to download
+# the Maven distribution directly).
+# ----------------------------------------------------------------------------
+
+# Resolve the root project directory based on the location of this script.
+# Allows the script to be invoked from anywhere.
+PRG="$0"
+# Cycle through symlinks to find the real script location
+while [ -h "$PRG" ]; do
+  ls=$(ls -ld "$PRG")
+  link=$(expr "$ls" : '.*-> \(.*\)$')
+  if expr "$link" : '/.*' > /dev/null; then
+    PRG="$link"
+  else
+    PRG=$(dirname "$PRG")"/$link"
+  fi
+done
+MAVEN_PROJECTBASEDIR=$(cd "$(dirname "$PRG")" && pwd)
+export MAVEN_PROJECTBASEDIR
+
+# Read .mvn/jvm.config (extra JVM opts) if present
+if [ -f "$MAVEN_PROJECTBASEDIR/.mvn/jvm.config" ]; then
+  MAVEN_OPTS="${MAVEN_OPTS:-} $(cat "$MAVEN_PROJECTBASEDIR/.mvn/jvm.config")"
+  export MAVEN_OPTS
+fi
+
+# Read .mvn/maven.config (extra Maven args) if present
+MAVEN_CMD_LINE_ARGS="${MAVEN_CONFIG:-}"
+if [ -f "$MAVEN_PROJECTBASEDIR/.mvn/maven.config" ]; then
+  MAVEN_CMD_LINE_ARGS="$MAVEN_CMD_LINE_ARGS $(cat "$MAVEN_PROJECTBASEDIR/.mvn/maven.config")"
+fi
+
+# Find java executable
+if [ -n "$JAVA_HOME" ]; then
+  if [ -x "$JAVA_HOME/jre/sh/java" ]; then
+    JAVACMD="$JAVA_HOME/jre/sh/java"
+  else
+    JAVACMD="$JAVA_HOME/bin/java"
+  fi
+  if [ ! -x "$JAVACMD" ]; then
+    echo "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME" >&2
+    echo "Please set the JAVA_HOME variable in your environment to match the location of your Java installation." >&2
+    exit 1
+  fi
+else
+  JAVACMD="java"
+  command -v "$JAVACMD" > /dev/null 2>&1 || {
+    echo "ERROR: JAVA_HOME is not set and 'java' could not be found in your PATH." >&2
+    echo "Please set the JAVA_HOME variable in your environment to match the location of your Java installation." >&2
+    exit 1
+  }
+fi
+
+# Properties file for the wrapper
+MAVEN_WRAPPER_PROPERTIES="$MAVEN_PROJECTBASEDIR/.mvn/wrapper/maven-wrapper.properties"
+if [ ! -f "$MAVEN_WRAPPER_PROPERTIES" ]; then
+  echo "ERROR: Could not find $MAVEN_WRAPPER_PROPERTIES" >&2
+  echo "Create the file or generate the wrapper with: mvn -N wrapper:wrapper" >&2
+  exit 1
+fi
+
+# Determine wrapper jar (optional in 3.3.x) and distribution URL
+MAVEN_WRAPPER_JAR="$MAVEN_PROJECTBASEDIR/.mvn/wrapper/maven-wrapper.jar"
+
+# Parse the distributionUrl from the properties file
+distributionUrl=$(grep -E "^distributionUrl=" "$MAVEN_WRAPPER_PROPERTIES" | cut -d'=' -f2-)
+wrapperUrl=$(grep -E "^wrapperUrl=" "$MAVEN_WRAPPER_PROPERTIES" | cut -d'=' -f2-)
+
+# Location to cache the Maven distribution (and the wrapper jar if needed)
+MAVEN_HOME="${MAVEN_USER_HOME:-$HOME/.m2}/wrapper/dists/apache-maven-3.9.9"
+MAVEN_HOME_FLAG_FILE="$MAVEN_HOME/.maven-wrapper.flag"
+
+# If the wrapper jar exists, delegate to it (the canonical path)
+if [ -f "$MAVEN_WRAPPER_JAR" ]; then
+  exec "$JAVACMD" \
+    $MAVEN_OPTS \
+    -classpath "$MAVEN_WRAPPER_JAR" \
+    "-Dmaven.multiModuleProjectDirectory=$MAVEN_PROJECTBASEDIR" \
+    org.apache.maven.wrapper.MavenWrapperMain "$@"
+fi
+
+# ----------------------------------------------------------------------------
+# Distribution-only mode (no wrapper jar): download Maven directly.
+# ----------------------------------------------------------------------------
+if [ -z "$distributionUrl" ]; then
+  echo "ERROR: distributionUrl not set in $MAVEN_WRAPPER_PROPERTIES" >&2
+  exit 1
+fi
+
+distributionName=$(echo "$distributionUrl" | sed -E 's|.*/([^/]+)-bin\.(zip|tar\.gz)$|\1|')
+distributionType=$(echo "$distributionUrl" | sed -E 's|.+\.(zip|tar\.gz)$|\1|')
+[ -z "$distributionType" ] && distributionType="zip"
+
+# Cache the distribution per-user to avoid re-downloading
+CACHE_BASE="${MAVEN_USER_HOME:-$HOME/.m2}/wrapper/dists"
+DIST_DIR="$CACHE_BASE/$distributionName"
+
+# Decide the download tool
+download_tool=""
+if command -v curl > /dev/null 2>&1; then
+  download_tool="curl"
+elif command -v wget > /dev/null 2>&1; then
+  download_tool="wget"
+else
+  echo "ERROR: Neither curl nor wget is available; cannot download Maven." >&2
+  echo "Install Maven manually or set MAVEN_HOME to a pre-installed Maven." >&2
+  exit 1
+fi
+
+# Find an existing extracted maven under DIST_DIR
+MAVEN_EXEC=""
+if [ -d "$DIST_DIR" ]; then
+  for d in "$DIST_DIR"/*/; do
+    if [ -x "${d}bin/mvn" ]; then
+      MAVEN_EXEC="${d}bin/mvn"
+      break
+    fi
+  done
+fi
+
+# If not present, download + extract
+if [ -z "$MAVEN_EXEC" ]; then
+  mkdir -p "$DIST_DIR"
+  archive="$DIST_DIR/maven-dist.$distributionType"
+  echo "Downloading Apache Maven from $distributionUrl ..."
+  if [ "$download_tool" = "curl" ]; then
+    curl -sSfL -o "$archive" "$distributionUrl" || { echo "ERROR: curl download failed" >&2; exit 1; }
+  else
+    wget -q -O "$archive" "$distributionUrl" || { echo "ERROR: wget download failed" >&2; exit 1; }
+  fi
+
+  echo "Extracting Maven to $DIST_DIR ..."
+  if [ "$distributionType" = "zip" ]; then
+    unzip -q -o "$archive" -d "$DIST_DIR" || { echo "ERROR: unzip failed (is unzip installed?)" >&2; exit 1; }
+  else
+    tar -xzf "$archive" -C "$DIST_DIR" || { echo "ERROR: tar extract failed" >&2; exit 1; }
+  fi
+  rm -f "$archive"
+
+  for d in "$DIST_DIR"/*/; do
+    if [ -x "${d}bin/mvn" ]; then
+      MAVEN_EXEC="${d}bin/mvn"
+      break
+    fi
+  done
+fi
+
+if [ -z "$MAVEN_EXEC" ]; then
+  echo "ERROR: Could not locate the Maven executable after extraction in $DIST_DIR" >&2
+  exit 1
+fi
+
+exec "$JAVACMD" \
+  $MAVEN_OPTS \
+  "-Dmaven.multiModuleProjectDirectory=$MAVEN_PROJECTBASEDIR" \
+  -classpath /dev/null \
+  "$MAVEN_EXEC" \
+  $MAVEN_CMD_LINE_ARGS "$@"

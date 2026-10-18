@@ -1,0 +1,71 @@
+# =============================================================================
+# SIGER — .gitignore (raíz del monorepo)
+# =============================================================================
+
+# --- Java / Maven ---
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+.mvn/timestamps/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# --- Node / Frontend ---
+node_modules/
+dist/
+build/
+.next/
+.npm/
+.pnpm-store/
+.vite/
+coverage/
+
+# --- IDEs ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.factorypath
+.classpath
+.project
+.settings/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ---
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Entornos y secretos (NUNCA commitear .env reales) ---
+.env
+.env.local
+.env.*.local
+.env.dev
+.env.prod
+backend/.env
+frontend/.env
+
+# --- Bases de datos locales ---
+*.db
+*.sqlite
+*.sqlite3
+db/*.db
+
+# --- Docker volúmenes locales ---
+.mysql-data/
+.redis-data/
+
+# --- Cobertura / reportes ---
+*.lcov
+.coverage
+htmlcov/
+.pytest_cache/
