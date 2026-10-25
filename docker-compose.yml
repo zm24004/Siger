@@ -1,0 +1,85 @@
+# -----------------------------------------------------------------------------
+# SIGER - Docker Compose (Producción/Demo)
+# Levanta: MySQL 8 + Spring Boot Backend + React+Vite + Nginx Frontend
+# Nota: `docker compose down -v` reinicializa el SQL (borra volumen siger_db_data)
+# -----------------------------------------------------------------------------
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: siger-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-siger}
+      MYSQL_USER: ${MYSQL_USER:-siger_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - siger_db_data:/var/lib/mysql
+      - ./database/siger.sql:/docker-entrypoint-initdb.d/01-siger.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - siger-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: siger-backend
+    restart: unless-stopped
+    expose:
+      - "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - siger-net
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: ${DB_URL:-jdbc:mysql://db:3306/siger?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-siger_app}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      TZ: UTC
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_APP_NAME: ${VITE_APP_NAME:-SIGER}
+    container_name: siger-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      - backend
+    networks:
+      - siger-net
+
+volumes:
+  siger_db_data:
+
+networks:
+  siger-net:
+    driver: bridge

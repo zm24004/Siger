@@ -77,9 +77,9 @@ siger/
 │           │   ├── service/       # Lógica de negocio
 │           │   └── security/      # JwtFilter, JwtProvider, UserDetailsSvc
 │           └── resources/
-│               ├── application.properties            # perfil default
-│               ├── application-dev.properties       # perfil dev
-│               ├── application-prod.properties      # perfil prod
+│               ├── application.yml            # perfil default
+│               ├── application-dev.yml       # perfil dev
+│               ├── application-prod.yml      # perfil prod
 │               ├── logback-spring.xml               # logging
 │               └── db/migration/README.md           # reservado para Flyway
 ├── frontend/ (falta o no implementado todavia * )
@@ -131,105 +131,79 @@ siger/
 
 ---
 
-## Puesta en marcha rápida (Docker)
 
-> Irve para revisión del cliente o despliegue de demo. Todo el stack se levanta con un comando \*.
+## Entorno de desarrollo local
+
+Ideal para desarrollar con tu editor favorito (IntelliJ IDEA, VS Code, WebStorm, etc.). Levanta la BD con Docker, y luego configura/backend y frontend por separado.
+
+### 1) Levantar la base de datos con Docker
+
+Desde la raíz del repositorio:
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/<org>/siger.git
-cd siger
-
-# 2. Crear archivo de entorno con tus secretos
+# Crear archivo .env para la BD si aún no existe
 cp .env.example .env
-# Edita .env y cambia MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD y JWT_SECRET
-# por valores seguros de al menos 32 caracteres.
-
-# 3. Levantar todo el stack
-docker compose up --build
-
-# 4. En otra terminal, seguir logs del backend
-docker compose logs -f backend
+# Edita .env con MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD (mínimo)
 ```
 
-Servicios disponibles una vez levantado:
-
-| Servicio    | URL local             | Credenciales por defecto (seed)         |
-| ----------- | --------------------- | --------------------------------------- |
-| Frontend    | http://localhost:5173 | `admin@siger.com` / `admin123`          |
-| Backend API | http://localhost:8080 |                                         |
-| MySQL       | localhost:3306        | `siger_app` / valor de `MYSQL_PASSWORD` |
-
-El primer arranque de MySQL ejecuta automáticamente `database/siger.sql`
-(montado en `/docker-entrypoint-initdb.d/`). El backend espera al healthcheck
-`mysqladmin ping` antes de arrancar.
-
-Para detener todo y **conservar** la base de datos:
+Levanta solo la base de datos:
 
 ```bash
-docker compose down
+docker compose up -d db
 ```
 
-Para detener y **borrar** la base de datos (reinit en próximo arranque):
-
-```bash
-docker compose down -v
-```
-
----
-
-## Puesta en marcha manual (dev local)
-
-### Paso 1 — Base de datos MySQL
-
-```bash
-# Linux/macOS
-sudo mysql -u root -p < database/siger.sql
-
-# O usar el helper del repo:
-./scripts/reset-db.sh
-```
-
-Crear usuario de aplicación (si no está en el seed):
+- MySQL quedará en `localhost:${MYSQL_PORT:-3306}`.
+- En el **primer arranque**, `database/siger.sql` se ejecuta automáticamente desde `/docker-entrypoint-initdb.d/01-siger.sql`.
+- Usuario de app: `siger_app` con password `MYSQL_PASSWORD`. Si necesitas crearlo manualmente (caso BD externa/local): 
 
 ```sql
-CREATE USER 'siger_app'@'localhost' IDENTIFIED BY 'tu_password';
+CREATE USER IF NOT EXISTS 'siger_app'@'localhost' IDENTIFIED BY 'tu_password_segura';
 GRANT ALL PRIVILEGES ON siger.* TO 'siger_app'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-### Paso 2 — Backend (Spring Boot)
+Para detenerla conservando datos: `docker compose stop db` / `docker compose down` (sin `-v`). Para reiniciar desde cero: `docker compose down -v && docker compose up -d db`.
 
-```bash
-cd backend
+## 2) Configurar y levantar el Backend
 
-# Variables de entorno mínimas
-export DB_URL="jdbc:mysql://localhost:3306/siger?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
-export DB_USERNAME="siger_app"
-export DB_PASSWORD="tu_password"
-export JWT_SECRET="genera_un_secret_de_al_menos_64_caracteres_aqui"
-export SPRING_PROFILES_ACTIVE="dev"
+El backend usa el perfil `dev` fuera de Docker. Lee `application.yml` + `application-dev.yml`. Configura variables de entorno.
 
-# Compilar y arrancar (puerto 8080)
-./mvnw spring-boot:run
-```
+**Variables mínimas (perfil dev):**
+| Variable | Valor (ejemplo) | Notas |
+| --- | --------------- | -----|
+| `SPRING_PROFILES_ACTIVE` | `dev` | Obligatorio |
+| `DB_URL` | `jdbc:mysql://localhost:3306/siger?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true` | Coincide con BD levantada por Docker o local |
+| `DB_USERNAME` | `siger_app` | Debe existir |
+| `DB_PASSWORD` | `tu_password_segura` | Debe coincidir |
+| `JWT_SECRET` | `cadena_aleatoria_de_al_menos_64_caracteres` | Obligatorio |
+| `JWT_EXPIRATION_MS` | `86400000` | Opcional |
 
-Verificar: abrir http://localhost:8080/actuator/health → `{"status":"UP"}`.
 
-### Paso 3 — Frontend (Vite)
+Verificar: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) → `{"status":"UP"}`.
+
+### Desde IntelliJ IDEA
+1. `Run > Edit Configurations...` → crear/editar configuración Spring Boot apuntando a `com.siger.SigerApplication`.
+2. En **Environment variables** agrega:
+   ```
+   SPRING_PROFILES_ACTIVE=dev;DB_USERNAME=siger_app;DB_PASSWORD=tu_password_segura;JWT_SECRET=tu_secreto_largo;JWT_EXPIRATION_MS=86400000
+   ```
+3. Ejecutar.  
+
+> **Nota sobre `.env`:** Si prefieres cargar `backend/.env`, instala el plugin **EnvFile** en IntelliJ y apunta al archivo. Si no lo instalas, **usa el campo Environment variables** (recomendado). Spring Boot no siempre carga `.env` automáticamente desde el IDE.
+
+### Desde VS Code
+Usa las tareas `Backend: Run (./mvnw spring-boot:run)` o configura `launch.json` con las variables anteriores.
+
+### 3) Configurar y levantar el Frontend
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local   # ajustar VITE_API_BASE_URL si backend no está en 8080
+cp .env.example .env.local   # VITE_API_URL=/api
 npm run dev                   # http://localhost:5173
 ```
 
-### Helper todo-en-uno
-
-```bash
-./scripts/run-dev.sh   # verifica MySQL, exporta env por defecto, lanza backend+frontend
-```
+`vite.config.ts` proxea `/api` al backend en `http://localhost:8080`, evitando CORS en desarrollo. Puedes abrir `frontend/` en tu editor favorito y correr `npm run dev` desde la terminal integrada.
 
 ---
 
@@ -241,19 +215,130 @@ npm run dev                   # http://localhost:5173
 | `MYSQL_USER`             | db          | Usuario de aplicación                 | `siger_app`                      |
 | `MYSQL_PASSWORD`         | db, backend | Password de aplicación                | string seguro                    |
 | `MYSQL_ROOT_PASSWORD`    | db          | Password root (solo init)             | string seguro                    |
+| `DB_HOST`                | backend     | Host MySQL (compose: `db`, local: `localhost`) | `db` / `localhost` |
 | `DB_URL`                 | backend     | JDBC URL                              | `jdbc:mysql://db:3306/siger?...` |
 | `DB_USERNAME`            | backend     | Usuario JDBC                          | `siger_app`                      |
 | `DB_PASSWORD`            | backend     | Password JDBC (inyectado por compose) |                                  |
 | `JWT_SECRET`             | backend     | Clave de firma HS256 (≥64 chars)      | string aleatorio                 |
 | `JWT_EXPIRATION_MS`      | backend     | Expiración del token                  | `86400000`                       |
 | `SPRING_PROFILES_ACTIVE` | backend     | Perfil activo                         | `dev` / `prod`                   |
-| `VITE_API_BASE_URL`      | frontend    | URL del backend desde el navegador    | `http://localhost:8080`          |
+| `SERVER_PORT`            | backend     | Puerto del backend                    | `8080`                           |
+| `SIGER_CORS_ORIGIN`      | backend     | Orígenes CORS permitidos (prod)       | `http://localhost:5173,http://localhost` |
+| `VITE_API_BASE_URL`      | frontend    | Ruta base de la API (relativa evita CORS) | `/api`                       |
+| `VITE_APP_NAME`           | frontend    | Nombre de app (build arg)             | `SIGER`                          |
 | `FRONTEND_PORT`          | compose     | Puerto público del frontend           | `5173`                           |
+| `MYSQL_PORT`             | compose     | Puerto público de MySQL               | `3306`                           |
 
-> **Seguridad:** nunca commitees un `.env` con secretos reales. El archivo
-> `.gitignore` ya excluye `.env`, `.env.local` y variantes. En producción,
-> inyecta los secretos desde un gestor (Vault, AWS Secrets Manager, GitHub
-> Actions secrets, etc.).
+> **Importante:** `DB_PASSWORD` y `MYSQL_PASSWORD` **deben coincidir**.  
+> **Seguridad:** nunca commitees un `.env` con secretos reales. El archivo `.gitignore` ya excluye `.env`, `.env.local` y variantes
+
+### Archivos `.env` en el repo
+- `.env.example` (raíz) — plantilla para **Docker Compose** (usa perfil `prod` por defecto en el ejemplo).
+- `backend/.env.example` / `backend/.env` — plantilla/valores para **desarrollo local del backend** (perfil `dev`).
+- `frontend/.env.example` / `frontend/.env` — valores para el frontend. En dev local con Vite suele usarse `.env.local`.
+
+---
+
+## Levantar todo para simular entorno de producción (Docker Compose)
+
+Para simular un despliegue productivo, levanta **base de datos, backend y frontend juntos** con Docker. Se usan perfiles `prod`, build multi-stage, Nginx para el frontend, healthcheck en MySQL y `database/siger.sql` para inicializar la BD.
+
+### 1) Configurar variables
+Desde la raíz del repositorio:
+
+```bash
+cp .env.example .env
+```
+
+Edita `.env` con valores seguros. **Importante:** `DB_PASSWORD` debe coincidir con `MYSQL_PASSWORD`.
+
+```env
+# MySQL
+MYSQL_DATABASE=siger
+MYSQL_USER=siger_app
+MYSQL_PASSWORD=UnaPasswordMuySegura123!
+MYSQL_ROOT_PASSWORD=RootPasswordMuySegura456!
+MYSQL_PORT=3306
+
+# Backend (prod)
+DB_HOST=db
+DB_URL=jdbc:mysql://db:3306/siger?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+DB_USERNAME=siger_app
+DB_PASSWORD=UnaPasswordMuySegura123!
+JWT_SECRET=GeneraUnaClaveAleatoriaDeAlMenos64CaracteresAqui...
+JWT_EXPIRATION_MS=86400000
+SPRING_PROFILES_ACTIVE=prod
+SERVER_PORT=8080
+SIGER_CORS_ORIGIN=http://localhost:5173,http://localhost
+
+# Frontend
+VITE_API_BASE_URL=/api
+VITE_APP_NAME=SIGER
+FRONTEND_PORT=5173
+```
+
+### 2) Construir y levantar
+```bash
+docker compose up --build
+# o en segundo plano
+docker compose up --build -d
+```
+
+### 3) Accesos
+| Servicio | URL | Notas |
+| --- | --- | -----|
+| Frontend | [http://localhost:5173](http://localhost:5173) | Servido por nginx con proxy a backend |
+| Backend API | [http://localhost:8080](http://localhost:8080) | Perfil `prod` |
+| Healthcheck | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) | `{"status":"UP"}` |
+| MySQL | `localhost:${MYSQL_PORT:-3306}` | Expuesto por puerto |
+
+### Comandos útiles
+```bash
+docker compose logs -f        # ver logs
+docker compose down          # parar conservando BD
+docker compose down -v       # parar y borrar volumen (re-ejecuta siger.sql)
+docker compose ps
+```
+
+### Notas rápidas
+- **Imagened docker Multi-stage:** Backend Maven→JRE (usuario no-root, healthcheck + `wait-for.sh`). Frontend Node→nginx con `nginx.conf` (SPA fallback + proxy `/api/` y `/ws-notificaciones/` con upgrade WS).
+- **Inicialización:** Solo primera vez del volumen, `database/siger.sql` se monta en `/docker-entrypoint-initdb.d/`.
+- **Perfiles:** En este modo se usa `prod` (`application-prod.yml` con `ddl-auto: none`, logs INFO, CORS por `SIGER_CORS_ORIGIN`).  
+
+---
+
+## Archivos `properties` / `application.yml`: ¿por qué y cómo reemplazarlos/usarlos?
+
+
+### Cuándo reemplazar / qué tener claro
+| Archivo | Cuándo usar | Notas |
+| --- | --- | -----|
+| `application.yml` | Siempre (base) | No poner contraseñas. Solo configuración compartida. |
+| `application-dev.yml` | Desarrollo local fuera de Docker | Usa `localhost:3306`, `ddl-auto: update` (útil para desarrollo), `show-sql: true`. Puede usar defaults si faltan env vars. |
+| `application-prod.yml` | Docker/producción | Usa variables `${DB_URL}`, `${DB_PASSWORD}`, `${JWT_SECRET}`, `ddl-auto: none`, logs menos verbosos, CORS configurable con `${SIGER_CORS_ORIGIN}`. |
+
+### Cómo reemplazar variables (uso claro)
+Usa **sustitución de propiedades con variables de entorno**:
+
+```yaml
+# application-prod.yml (ejemplo)
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://db:3306/siger?...}  # fallback si falta env
+    username: ${DB_USERNAME:siger_app}
+    password: ${DB_PASSWORD}                        # sin fallback en prod (falla si falta)
+```
+
+**Recomendaciones prácticas:**
+- **En dev local (terminal)**: exporta las variables o usa `.env` cargado por tu shell/editor.
+- **En IntelliJ**: usa `Environment variables` en Run Configuration (ver arriba). Si deseas leer `.env`, usa plugin EnvFile.
+- **En Docker Compose**: pasa variables vía `env_file: [.env]` + `environment:` (ya configurado). Spring lee `${...}` desde el entorno del contenedor.
+- **No mezclar perfiles**: Para simular **producción con Docker**, usa **`SPRING_PROFILES_ACTIVE=prod`** (así `application-prod.yml` aplica). Para desarrollo con BD local + backend/frontend corriendo fuera de Docker, usa **`SPRING_PROFILES_ACTIVE=dev`**.
+- **Secretos**: Nunca commitees `.env`. Usa `.env.example` como plantilla.
+- **CORS**: En `dev` está fijo a `http://localhost:5173`. En `prod` usa `${SIGER_CORS_ORIGIN}` para permitir orígenes según despliegue.
+- **Migraciones**: Actualmente se usa **SQL script único** `database/siger.sql` (no Flyway/Liquibase activo). Por eso `ddl-auto: none` en prod es correcto para evitar desajustes con el esquema existente.
+
+> **Nota sobre `application.properties` vs `.yml`:** El repo usa principalmente `.yml` para perfiles. El `application.yml` base está en YAML; sigue siendo perfectamente válido y legible. Lo importante es entender el **orden de carga** y la **inyección por variables** para pasar fácilmente entre dev local y dockerizado (simulando producción).
 
 ---
 
