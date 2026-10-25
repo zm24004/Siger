@@ -1,0 +1,30 @@
+# =====================================================================
+# SIGER — DEV profile
+# =====================================================================
+
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/siger?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:siger_app}
+    password: ${DB_PASSWORD:devpass}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    com.siger: DEBUG
+    org.springframework.security: INFO
+
+siger:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-change-me}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  cors:
+    origin: http://localhost:5173

@@ -35,16 +35,16 @@ public abstract class Usuario {
     @Column(nullable = false, length = 100)
     private String nombre;
 
-    @Column(length = 100)
+    @Column(nullable = false, length = 100)
     private String apellido;
 
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
-    @Column(length = 30)
+    @Column(nullable = false, length = 30)
     private String telefono;
 
-    @Column(name = "codigoPais", length = 10)
+    @Column(nullable = false, name = "codigoPais", length = 10)
     private String codigoPais;
 
     @Column(nullable = false, length = 255)
