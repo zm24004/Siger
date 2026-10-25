@@ -9,17 +9,18 @@ export default defineConfig({
     global: 'globalThis',
   },
   server: {
+    host: '0.0.0.0',
     port: 5173,
     proxy: {
       // Optional proxy to avoid CORS during local development.
       '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true
+        changeOrigin: true,
+        target: 'http://localhost:8080'
       },
       // WebSocket/STOMP endpoint proxy (SockJS uses HTTP upgrade)
       '/ws-notificaciones': {
-        target: 'http://localhost:8080',
         changeOrigin: true,
+        target: 'http://localhost:8080',
         ws: true
       }
     }
