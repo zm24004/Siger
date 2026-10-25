@@ -3,19 +3,24 @@ import { Client } from '@stomp/stompjs'
 
 /**
  * Builds the SockJS WebSocket URL from the same env-var pattern used by
- * http.js (VITE_API_URL || VITE_API_BASE_URL || 'http://localhost:8080/api').
+ * http.js (VITE_API_URL || VITE_API_BASE_URL || '/api').
  * We strip the trailing '/api' segment and append '/ws-notificaciones',
- * so the default becomes 'http://localhost:8080/ws-notificaciones'.
+ * resolving relative bases against the current origin so it stays same-origin.
  *
  * SockJS expects an HTTP(S) URL — it handles the upgrade negotiation itself.
  */
 function buildWsUrl() {
   const base = import.meta.env.VITE_API_URL
     || import.meta.env.VITE_API_BASE_URL
-    || 'http://localhost:8080/api'
+    || '/api'
   // Strip everything after (and including) the last '/api' segment.
   const trimmed = base.replace(/\/api\/?$/, '')
-  return `${trimmed}/ws-notificaciones`
+  // SockJS requires an absolute URL. If the base is relative (e.g. '/api'),
+  // resolve it against the current origin so nginx/Vite can proxy it.
+  const wsBase = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `${window.location.origin}${trimmed}`
+  return `${wsBase}/ws-notificaciones`
 }
 
 /**
