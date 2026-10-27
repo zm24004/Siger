@@ -1,6 +1,7 @@
 package com.siger.controller;
 
 import com.siger.dto.ReservacionResponse;
+import com.siger.security.Permisos;
 import com.siger.service.ReservacionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,49 +21,49 @@ public class ReservacionController {
     }
 
     @PostMapping("/evento/{idEvento}")
-    @PreAuthorize("hasRole('PARTICIPANTE')")
+    @PreAuthorize("hasAuthority('" + Permisos.RESERVATIONS_CREATE + "')")
     public ResponseEntity<ReservacionResponse> reservar(@PathVariable Long idEvento, Authentication auth) {
         return ResponseEntity.ok(service.reservar(idEvento, auth.getName()));
     }
 
     @GetMapping("/mis-reservaciones")
-    @PreAuthorize("hasRole('PARTICIPANTE')")
+    @PreAuthorize("hasAuthority('" + Permisos.RESERVATIONS_READ_OWN + "')")
     public ResponseEntity<List<ReservacionResponse>> misReservaciones(Authentication auth) {
         return ResponseEntity.ok(service.misReservaciones(auth.getName()));
     }
 
     @GetMapping("/{codigo}")
-    @PreAuthorize("hasRole('PARTICIPANTE')")
+    @PreAuthorize("hasAuthority('" + Permisos.RESERVATIONS_READ_OWN + "')")
     public ResponseEntity<ReservacionResponse> detalle(@PathVariable String codigo) {
         return ResponseEntity.ok(service.detallePorCodigo(codigo));
     }
 
     @PatchMapping("/{id}/pausar")
-    @PreAuthorize("hasRole('PARTICIPANTE')")
+    @PreAuthorize("hasAuthority('" + Permisos.RESERVATIONS_MANAGE_OWN + "')")
     public ResponseEntity<ReservacionResponse> pausar(@PathVariable Long id, Authentication auth) {
         return ResponseEntity.ok(service.pausar(id, auth.getName()));
     }
 
     @PatchMapping("/{id}/confirmar")
-    @PreAuthorize("hasRole('PARTICIPANTE')")
+    @PreAuthorize("hasAuthority('" + Permisos.RESERVATIONS_MANAGE_OWN + "')")
     public ResponseEntity<ReservacionResponse> confirmar(@PathVariable Long id, Authentication auth) {
         return ResponseEntity.ok(service.confirmar(id, auth.getName()));
     }
 
     @PatchMapping("/{id}/cancelar")
-    @PreAuthorize("hasRole('PARTICIPANTE')")
+    @PreAuthorize("hasAuthority('" + Permisos.RESERVATIONS_MANAGE_OWN + "')")
     public ResponseEntity<ReservacionResponse> cancelar(@PathVariable Long id, Authentication auth) {
         return ResponseEntity.ok(service.cancelar(id, auth.getName()));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('" + Permisos.RESERVATIONS_READ_ALL + "')")
     public ResponseEntity<List<ReservacionResponse>> listarTodas() {
         return ResponseEntity.ok(service.listarTodas());
     }
 
     @PatchMapping("/admin/{id}/cancelar")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('" + Permisos.RESERVATIONS_MANAGE_ALL + "')")
     public ResponseEntity<ReservacionResponse> cancelarComoAdmin(@PathVariable Long id) {
         return ResponseEntity.ok(service.cancelarComoAdmin(id));
     }

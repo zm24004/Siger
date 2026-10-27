@@ -52,7 +52,11 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Public authentication endpoints
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/register",
+                    "/api/v1/auth/forgot-password"
+                ).permitAll()
                 // WebSocket / STOMP handshake endpoint — the actual authentication
                 // happens at the STOMP CONNECT frame via JwtChannelInterceptor,
                 // so the HTTP handshake (and SockJS info/XHR) must be public.
@@ -64,9 +68,10 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                     "/api/ubicaciones", "/api/ubicaciones/**").permitAll()
                 // User management is admin-only
-                .requestMatchers("/api/usuarios/**").hasRole("ADMINISTRADOR")
+                .requestMatchers("/api/v1/usuarios/**", "/api/v1/roles/**").authenticated()
                 // OpenAPI / Swagger
                 .requestMatchers(
+                    "/openapi.yml",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html"

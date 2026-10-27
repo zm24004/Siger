@@ -5,10 +5,14 @@ import com.siger.controller.EventoController;
 import com.siger.controller.UsuarioController;
 import com.siger.dto.EventoRequest;
 import com.siger.dto.EventoResponse;
+import com.siger.dto.UsuarioPageResponse;
 import com.siger.model.Administrador;
 import com.siger.model.Organizador;
 import com.siger.model.Participante;
+import com.siger.model.Permiso;
+import com.siger.model.Rol;
 import com.siger.model.Usuario;
+import com.siger.repository.RolRepository;
 import com.siger.repository.UsuarioRepository;
 import com.siger.service.EventoService;
 import com.siger.service.UsuarioService;
@@ -24,8 +28,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -70,6 +76,8 @@ class SecurityConfigTest {
     @MockitoBean EventoService eventoService;
     @MockitoBean UsuarioService usuarioService;
     @MockitoBean UsuarioRepository usuarioRepository;
+    @MockitoBean RolRepository rolRepository;
+    @MockitoBean TokenRevocationService tokenRevocationService;
 
     // ------------------------------------------------------------------
     //  Helpers
@@ -81,6 +89,10 @@ class SecurityConfigTest {
 
     /** Hace que UserDetailsServiceImpl encuentre al usuario por email. */
     private void usuarioExiste(String email, String tipo) {
+        usuarioExiste(email, tipo, true);
+    }
+
+    private void usuarioExiste(String email, String tipo, boolean activo) {
         Usuario user = switch (tipo) {
             case "ADMINISTRADOR" -> new Administrador();
             case "ORGANIZADOR" -> new Organizador();
@@ -89,8 +101,32 @@ class SecurityConfigTest {
         user.setEmail(email);
         user.setNombre("User " + email);
         user.setContrasena("hash-bcrypt");
-        user.setEstado(true);
+        user.setEstado(activo);
         when(usuarioRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+        String codigoRol = switch (tipo) {
+            case "ADMINISTRADOR" -> "ADM";
+            case "ORGANIZADOR" -> "ORG";
+            default -> "PAR";
+        };
+        Set<String> permisos = switch (tipo) {
+            case "ADMINISTRADOR" -> Set.of(Permisos.USERS_READ, Permisos.USERS_CREATE,
+                    Permisos.USERS_UPDATE, Permisos.USERS_STATE, Permisos.USERS_DELETE,
+                    Permisos.ROLES_READ, Permisos.ROLES_UPDATE,
+                    Permisos.RESERVATIONS_READ_ALL, Permisos.RESERVATIONS_MANAGE_ALL);
+            case "ORGANIZADOR" -> Set.of(Permisos.EVENTS_MANAGE, Permisos.LOCATIONS_CREATE,
+                    Permisos.RESOURCES_READ, Permisos.RESOURCES_CREATE,
+                    Permisos.ATTENDANCE_REGISTER);
+            default -> Set.of(Permisos.RESERVATIONS_CREATE, Permisos.RESERVATIONS_READ_OWN,
+                    Permisos.RESERVATIONS_MANAGE_OWN);
+        };
+        Rol rol = new Rol();
+        rol.setIdRol(codigoRol);
+        rol.setNombre(tipo);
+        rol.setPermisos(permisos.stream()
+                .map(permiso -> new Permiso(permiso, permiso))
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new)));
+        when(rolRepository.findById(codigoRol)).thenReturn(Optional.of(rol));
     }
 
     private EventoResponse eventoResponse() {
@@ -154,9 +190,9 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("GET /api/usuarios sin token -> 401 (requiere ADMINISTRADOR)")
+    @DisplayName("GET /api/v1/usuarios sin token -> 401")
     void getUsuarios_sinToken_retorna401() throws Exception {
-        mockMvc.perform(get("/api/usuarios"))
+        mockMvc.perform(get("/api/v1/usuarios"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -177,6 +213,38 @@ class SecurityConfigTest {
     // ------------------------------------------------------------------
     //  Control de roles (@PreAuthorize)
     // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("el permiso se obtiene del rol actual, no del claim rol del JWT")
+    void getUsuarios_claimAdministradorPeroRolParticipante_retorna403() throws Exception {
+        usuarioExiste("part@test.x", "PARTICIPANTE");
+
+        mockMvc.perform(get("/api/v1/usuarios")
+                        .header("Authorization", "Bearer " + tokenPara("part@test.x", "ADMINISTRADOR")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/usuarios con token revocado -> 401")
+    void getUsuarios_conTokenRevocado_retorna401() throws Exception {
+        usuarioExiste("admin@test.x", "ADMINISTRADOR");
+        String token = tokenPara("admin@test.x", "ADMINISTRADOR");
+        when(tokenRevocationService.estaRevocado(token)).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/usuarios")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/usuarios con usuario inactivo -> 401")
+    void getUsuarios_conUsuarioInactivo_retorna401() throws Exception {
+        usuarioExiste("inactivo@test.x", "ADMINISTRADOR", false);
+
+        mockMvc.perform(get("/api/v1/usuarios")
+                        .header("Authorization", "Bearer " + tokenPara("inactivo@test.x", "ADMINISTRADOR")))
+                .andExpect(status().isUnauthorized());
+    }
 
     @Test
     @DisplayName("POST /api/eventos con token PARTICIPANTE -> 403 (requiere ORGANIZADOR)")
@@ -217,23 +285,23 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("GET /api/usuarios con token PARTICIPANTE -> 403 (requiere ADMINISTRADOR)")
+    @DisplayName("GET /api/v1/usuarios con PARTICIPANTE -> 403 (sin users:read)")
     void getUsuarios_conParticipante_retorna403() throws Exception {
         usuarioExiste("part@test.x", "PARTICIPANTE");
-        when(usuarioService.listarTodos()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/usuarios")
+        mockMvc.perform(get("/api/v1/usuarios")
                         .header("Authorization", "Bearer " + tokenPara("part@test.x", "PARTICIPANTE")))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("GET /api/usuarios con token ADMINISTRADOR -> 200")
+    @DisplayName("GET /api/v1/usuarios con ADMINISTRADOR y users:read -> 200")
     void getUsuarios_conAdministrador_retorna200() throws Exception {
         usuarioExiste("admin@test.x", "ADMINISTRADOR");
-        when(usuarioService.listarTodos()).thenReturn(List.of());
+        when(usuarioService.listar(null, null, 1, 20))
+                .thenReturn(new UsuarioPageResponse(List.of(), 1, 20, 0, 0));
 
-        mockMvc.perform(get("/api/usuarios")
+        mockMvc.perform(get("/api/v1/usuarios")
                         .header("Authorization", "Bearer " + tokenPara("admin@test.x", "ADMINISTRADOR")))
                 .andExpect(status().isOk());
     }

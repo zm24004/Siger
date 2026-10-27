@@ -2,6 +2,7 @@ package com.siger.controller;
 
 import com.siger.dto.UbicacionRequest;
 import com.siger.dto.UbicacionResponse;
+import com.siger.security.Permisos;
 import com.siger.service.UbicacionService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +30,7 @@ public class UbicacionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ORGANIZADOR')")
+    @PreAuthorize("hasAuthority('" + Permisos.LOCATIONS_CREATE + "')")
     public ResponseEntity<UbicacionResponse> crear(@Valid @RequestBody UbicacionRequest req) {
         return ResponseEntity.ok(ubicacionService.crear(req));
     }

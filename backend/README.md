@@ -13,13 +13,14 @@ REST API for the **Sistema de Gestión de Eventos y Reservas (SIGER)**.
 
 - JDK 21
 - Maven 3.9+
-- MySQL 8.0.16+ with the schema loaded from `../database/siger.sql`
+- MySQL 8.0.16+ with the schema and seed data loaded from `../database/siger.sql` and `../database/seed.sql`
 
 ## Setup
 
-1. Load the database schema:
+1. Load the database schema and seed data, in order:
    ```bash
    mysql -u root -p < ../database/siger.sql
+   mysql -u root -p < ../database/seed.sql
    ```
 2. Create the application DB user (recommended, do **not** use root):
    ```sql
@@ -35,12 +36,16 @@ REST API for the **Sistema de Gestión de Eventos y Reservas (SIGER)**.
 mvn spring-boot:run
 ```
 
-API base URL: `http://localhost:8080/api`
+API base URL: `http://localhost:8080` (current controllers use both `/api` and `/api/v1` prefixes).
 Swagger UI: `http://localhost:8080/swagger-ui.html`
+OpenAPI YAML: `http://localhost:8080/openapi.yml`
 
-## Default seed users (from siger.sql)
+Swagger UI loads the OpenAPI 3 specification from `src/main/resources/static/openapi.yml`.
+The generated Springdoc document remains available at `http://localhost:8080/v3/api-docs`.
 
-The seed hashes in `siger.sql` are placeholders. After loading the schema, either
+## Default seed users (from seed.sql)
+
+The seed hashes in `seed.sql` are placeholders. After loading the schema, either
 replace them with real BCrypt hashes, or register new users through `POST /api/auth/registro`.
 
 ## Tests (Testcontainers + MySQL 8)
@@ -84,4 +89,3 @@ The concurrency test therefore uses `@SpringBootTest` **without**
 own transaction, hits `SELECT ... FOR UPDATE` on the event row, and either
 acquires the lock or waits — proving the rule RF-08 / RN-04 / RN-05 holds
 under real contention.
-

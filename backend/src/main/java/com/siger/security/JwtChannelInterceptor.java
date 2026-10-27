@@ -2,6 +2,7 @@ package com.siger.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import lombok.AllArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -29,13 +30,10 @@ import org.springframework.stereotype.Component;
  * sees a closed socket rather than an unauthenticated session.</p>
  */
 @Component
+@AllArgsConstructor
 public class JwtChannelInterceptor implements ChannelInterceptor {
 
     private final JwtService jwtService;
-
-    public JwtChannelInterceptor(JwtService jwtService) {
-        this.jwtService = jwtService;
-    }
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {

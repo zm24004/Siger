@@ -2,6 +2,7 @@ package com.siger.controller;
 
 import com.siger.dto.RecursoRequest;
 import com.siger.dto.RecursoResponse;
+import com.siger.security.Permisos;
 import com.siger.service.RecursoService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +16,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/recursos")
-@PreAuthorize("hasRole('ORGANIZADOR')")
 public class RecursoController {
 
     private final RecursoService recursoService;
@@ -25,11 +25,13 @@ public class RecursoController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('" + Permisos.RESOURCES_READ + "')")
     public ResponseEntity<List<RecursoResponse>> listar() {
         return ResponseEntity.ok(recursoService.listar());
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('" + Permisos.RESOURCES_CREATE + "')")
     public ResponseEntity<RecursoResponse> crear(@Valid @RequestBody RecursoRequest req) {
         return ResponseEntity.ok(recursoService.crear(req));
     }

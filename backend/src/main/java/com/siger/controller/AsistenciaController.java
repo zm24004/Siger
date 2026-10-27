@@ -2,6 +2,7 @@ package com.siger.controller;
 
 import com.siger.dto.AsistenciaRequest;
 import com.siger.dto.AsistenciaResponse;
+import com.siger.security.Permisos;
 import com.siger.service.AsistenciaService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,7 @@ public class AsistenciaController {
     }
 
     @PostMapping("/registrar")
-    @PreAuthorize("hasRole('ORGANIZADOR')")
+    @PreAuthorize("hasAuthority('" + Permisos.ATTENDANCE_REGISTER + "')")
     public ResponseEntity<AsistenciaResponse> registrar(@Valid @RequestBody AsistenciaRequest req) {
         return ResponseEntity.ok(asistenciaService.registrar(req));
     }

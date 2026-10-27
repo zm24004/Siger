@@ -2,6 +2,7 @@ package com.siger.controller;
 
 import com.siger.dto.EventoRequest;
 import com.siger.dto.EventoResponse;
+import com.siger.security.Permisos;
 import com.siger.service.EventoService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -34,19 +35,19 @@ public class EventoController {
     }
 
     @GetMapping("/mis-eventos")
-    @PreAuthorize("hasRole('ORGANIZADOR')")
+    @PreAuthorize("hasAuthority('" + Permisos.EVENTS_MANAGE + "')")
     public ResponseEntity<List<EventoResponse>> misEventos() {
         return ResponseEntity.ok(eventoService.misEventos(SecurityUtils.requireEmail()));
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ORGANIZADOR')")
+    @PreAuthorize("hasAuthority('" + Permisos.EVENTS_MANAGE + "')")
     public ResponseEntity<EventoResponse> crear(@Valid @RequestBody EventoRequest req) {
         return ResponseEntity.ok(eventoService.crear(req, SecurityUtils.requireEmail()));
     }
 
     @PatchMapping("/{id}/cancelar")
-    @PreAuthorize("hasRole('ORGANIZADOR')")
+    @PreAuthorize("hasAuthority('" + Permisos.EVENTS_MANAGE + "')")
     public ResponseEntity<EventoResponse> cancelar(@PathVariable Long id) {
         return ResponseEntity.ok(eventoService.cancelar(id));
     }

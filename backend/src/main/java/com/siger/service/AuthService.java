@@ -1,93 +1,109 @@
 package com.siger.service;
 
+import com.siger.dto.CambiarContrasenaRequest;
+import com.siger.dto.UsuarioResponse;
 import com.siger.dto.auth.AuthResponse;
 import com.siger.dto.auth.LoginRequest;
 import com.siger.dto.auth.RegistroRequest;
 import com.siger.exception.BusinessException;
-import com.siger.exception.NotFoundException;
-import com.siger.model.Organizador;
 import com.siger.model.Participante;
 import com.siger.model.Usuario;
-import com.siger.repository.AdministradorRepository;
-import com.siger.repository.OrganizadorRepository;
 import com.siger.repository.ParticipanteRepository;
 import com.siger.repository.UsuarioRepository;
 import com.siger.security.JwtService;
+import com.siger.security.TokenRevocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Handles user login and self-registration (Organizador / Participante).
- * Self-registration of ADMINISTRADOR is not allowed.
- */
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
     private final ParticipanteRepository participanteRepository;
-    private final OrganizadorRepository organizadorRepository;
-    private final AdministradorRepository administradorRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final TokenRevocationService tokenRevocationService;
 
     @Transactional(readOnly = true)
-    public AuthResponse login(LoginRequest req) {
-        Usuario u = usuarioRepository.findByEmail(req.email())
-            .orElseThrow(() -> new NotFoundException("Credenciales inválidas."));
-
-        if (Boolean.FALSE.equals(u.getEstado())) {
-            throw new BusinessException("La cuenta está desactivada. Contacta al administrador.");
-        }
-
-        if (!passwordEncoder.matches(req.contrasena(), u.getContrasena())) {
+    public AuthResponse login(LoginRequest request) {
+        Usuario usuario = usuarioRepository.findByEmail(request.email().trim().toLowerCase(Locale.ROOT))
+            .orElseThrow(() -> new BusinessException("Credenciales inválidas."));
+        if (!Boolean.TRUE.equals(usuario.getEstado())
+            || !passwordEncoder.matches(request.contrasena(), usuario.getContrasena())) {
             throw new BusinessException("Credenciales inválidas.");
         }
 
-        String rol = RolHelper.derivarRol(u);
-        String token = jwtService.generar(u.getEmail(), rol);
-        return new AuthResponse(token, u.getNombre(), u.getApellido(), rol, u.getIdUsuario());
+        String rol = RolHelper.derivarRol(usuario);
+        String token = jwtService.generar(usuario.getEmail(), rol);
+        return new AuthResponse(token, usuario.getNombre(), usuario.getApellido(), rol, usuario.getIdUsuario());
     }
 
     @Transactional
-    public AuthResponse registro(RegistroRequest req) {
-        String rol = req.rol() == null ? "" : req.rol().trim().toUpperCase();
-        if (rol.equals("ADMINISTRADOR")) {
-            throw new BusinessException("No se permite el registro de administradores. Contacta a un administrador.");
-        }
-        if (!rol.equals("ORGANIZADOR") && !rol.equals("PARTICIPANTE")) {
-            throw new BusinessException("Rol inválido. Debe ser ORGANIZADOR o PARTICIPANTE.");
-        }
-        if (usuarioRepository.existsByEmail(req.email())) {
-            throw new BusinessException("Ya existe una cuenta con el email: " + req.email());
+    public AuthResponse registro(RegistroRequest request) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (usuarioRepository.existsByEmail(email)) {
+            throw new BusinessException("Ya existe una cuenta con ese email.");
         }
 
-        String hashed = passwordEncoder.encode(req.contrasena());
+        Participante participante = new Participante();
+        participante.setNombre(request.nombre().trim());
+        participante.setApellido(request.apellido() == null ? "" : request.apellido().trim());
+        participante.setEmail(email);
+        participante.setTelefono(request.telefono() == null ? "" : request.telefono().trim());
+        participante.setCodigoPais(request.codigoPais() == null ? "" : request.codigoPais().trim());
+        participante.setContrasena(passwordEncoder.encode(request.contrasena()));
+        participante.setEstado(true);
 
-        Usuario nuevo;
-        if (rol.equals("ORGANIZADOR")) {
-            Organizador o = new Organizador();
-            applyCommonFields(o, req, hashed);
-            nuevo = organizadorRepository.save(o);
-        } else {
-            Participante p = new Participante();
-            applyCommonFields(p, req, hashed);
-            nuevo = participanteRepository.save(p);
-        }
-
-        String token = jwtService.generar(nuevo.getEmail(), rol);
-        return new AuthResponse(token, nuevo.getNombre(), nuevo.getApellido(), rol, nuevo.getIdUsuario());
+        Participante nuevo = participanteRepository.save(participante);
+        String token = jwtService.generar(nuevo.getEmail(), "PARTICIPANTE");
+        return new AuthResponse(token, nuevo.getNombre(), nuevo.getApellido(), "PARTICIPANTE", nuevo.getIdUsuario());
     }
 
-    private void applyCommonFields(Usuario u, RegistroRequest req, String hashed) {
-        u.setNombre(req.nombre());
-        u.setApellido(req.apellido());
-        u.setEmail(req.email());
-        u.setTelefono(req.telefono());
-        u.setCodigoPais(req.codigoPais());
-        u.setContrasena(hashed);
-        u.setEstado(true);
+    @Transactional(readOnly = true)
+    public UsuarioResponse perfil(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+            .filter(u -> Boolean.TRUE.equals(u.getEstado()))
+            .orElseThrow(() -> new BusinessException("La cuenta autenticada ya no está activa."));
+        return toResponse(usuario);
+    }
+
+    @Transactional
+    public void cambiarContrasena(String email, CambiarContrasenaRequest request, String token) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+            .filter(u -> Boolean.TRUE.equals(u.getEstado()))
+            .orElseThrow(() -> new BusinessException("La cuenta autenticada ya no está activa."));
+        if (!passwordEncoder.matches(request.contrasenaActual(), usuario.getContrasena())) {
+            throw new BusinessException("La contraseña actual es incorrecta.");
+        }
+        if (passwordEncoder.matches(request.contrasenaNueva(), usuario.getContrasena())) {
+            throw new BusinessException("La contraseña nueva debe ser diferente a la actual.");
+        }
+
+        usuario.setContrasena(passwordEncoder.encode(request.contrasenaNueva()));
+        usuarioRepository.save(usuario);
+        tokenRevocationService.revocar(token);
+    }
+
+    @Transactional
+    public void logout(String token) {
+        tokenRevocationService.revocar(token);
+    }
+
+    private UsuarioResponse toResponse(Usuario usuario) {
+        return new UsuarioResponse(
+            usuario.getIdUsuario(),
+            usuario.getNombre(),
+            usuario.getApellido(),
+            usuario.getEmail(),
+            usuario.getTelefono(),
+            usuario.getCodigoPais(),
+            usuario.getEstado(),
+            RolHelper.derivarRol(usuario),
+            usuario.getFechaRegistro());
     }
 }

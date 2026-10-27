@@ -1,0 +1,1289 @@
+openapi: 3.0.3
+info:
+  title: SIGER API
+  description: |
+    API REST del Sistema de Gestión de Eventos y Reservas (SIGER).
+    Los endpoints reflejan las rutas actualmente implementadas. La autenticación
+    se realiza con JWT Bearer, salvo las operaciones públicas indicadas.
+  version: 1.0.0
+  contact:
+    name: Equipo SIGER
+servers:
+  - url: http://localhost:8080
+    description: Servidor local
+tags:
+  - name: Autenticación
+    description: Registro, inicio y administración de sesión.
+  - name: Eventos
+    description: Catálogo público y administración de eventos.
+  - name: Ubicaciones
+    description: Catálogo y creación de ubicaciones.
+  - name: Recursos
+    description: Consulta y creación de recursos.
+  - name: Reservaciones
+    description: Reservaciones propias y administración.
+  - name: Asistencias
+    description: Registro de asistencia a eventos.
+  - name: Notificaciones
+    description: Notificaciones del usuario autenticado.
+  - name: Usuarios
+    description: Administración de usuarios.
+  - name: Roles
+    description: Consulta de roles y administración de permisos.
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión
+      description: Autentica al usuario y devuelve un JWT.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: usuario@ejemplo.com
+              contrasena: MiClaveSegura123
+      responses:
+        '200':
+          description: Inicio de sesión exitoso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/auth/register:
+    post:
+      tags: [Autenticación]
+      summary: Registrar usuario
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroRequest'
+      responses:
+        '201':
+          description: Usuario registrado y autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/auth/logout:
+    post:
+      tags: [Autenticación]
+      summary: Cerrar sesión
+      description: Revoca el JWT enviado en el encabezado Authorization.
+      responses:
+        '204':
+          description: Sesión cerrada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/auth/forgot-password:
+    post:
+      tags: [Autenticación]
+      summary: Solicitar recuperación de contraseña
+      description: |
+        Devuelve siempre un mensaje genérico para no revelar si el correo está
+        registrado. Actualmente no envía correo ni inicia un flujo de recuperación.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecuperarContrasenaRequest'
+      responses:
+        '200':
+          description: Respuesta genérica de recuperación.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: Si existe una cuenta asociada, recibirás instrucciones para recuperar el acceso.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/v1/auth/me:
+    get:
+      tags: [Autenticación]
+      summary: Consultar perfil autenticado
+      responses:
+        '200':
+          description: Perfil del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/auth/me/password:
+    put:
+      tags: [Autenticación]
+      summary: Cambiar contraseña
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarContrasenaRequest'
+      responses:
+        '204':
+          description: Contraseña actualizada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/eventos:
+    get:
+      tags: [Eventos]
+      summary: Listar catálogo de eventos
+      description: Operación pública que devuelve el catálogo de eventos activos.
+      security: []
+      responses:
+        '200':
+          description: Eventos activos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventoResponse'
+    post:
+      tags: [Eventos]
+      summary: Crear evento
+      description: Requiere el permiso `events:manage`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventoRequest'
+      responses:
+        '200':
+          description: Evento creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/eventos/mis-eventos:
+    get:
+      tags: [Eventos]
+      summary: Listar eventos del organizador autenticado
+      description: Requiere el permiso `events:manage`.
+      responses:
+        '200':
+          description: Eventos del organizador autenticado.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/eventos/{id}:
+    get:
+      tags: [Eventos]
+      summary: Consultar evento
+      description: Consulta pública del detalle de un evento.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Detalle del evento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/eventos/{id}/cancelar:
+    patch:
+      tags: [Eventos]
+      summary: Cancelar evento
+      description: Requiere el permiso `events:manage`.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Evento cancelado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/ubicaciones:
+    get:
+      tags: [Ubicaciones]
+      summary: Listar ubicaciones
+      description: Operación pública que devuelve las ubicaciones disponibles.
+      security: []
+      responses:
+        '200':
+          description: Ubicaciones disponibles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UbicacionResponse'
+    post:
+      tags: [Ubicaciones]
+      summary: Crear ubicación
+      description: Requiere el permiso `locations:create`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UbicacionRequest'
+      responses:
+        '200':
+          description: Ubicación creada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UbicacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/recursos:
+    get:
+      tags: [Recursos]
+      summary: Listar recursos
+      description: Requiere el permiso `resources:read`.
+      responses:
+        '200':
+          description: Recursos registrados.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecursoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Recursos]
+      summary: Crear recurso
+      description: Requiere el permiso `resources:create`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecursoRequest'
+      responses:
+        '200':
+          description: Recurso creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecursoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/reservaciones/evento/{idEvento}:
+    post:
+      tags: [Reservaciones]
+      summary: Reservar un evento
+      description: Requiere el permiso `reservations:create`.
+      parameters:
+        - name: idEvento
+          in: path
+          required: true
+          description: Identificador del evento.
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Reservación creada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/reservaciones/mis-reservaciones:
+    get:
+      tags: [Reservaciones]
+      summary: Listar mis reservaciones
+      description: Requiere el permiso `reservations:read-own`.
+      responses:
+        '200':
+          description: Reservaciones del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/reservaciones:
+    get:
+      tags: [Reservaciones]
+      summary: Listar todas las reservaciones
+      description: Requiere el permiso `reservations:read-all`.
+      responses:
+        '200':
+          description: Reservaciones registradas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/reservaciones/{codigo}:
+    get:
+      tags: [Reservaciones]
+      summary: Consultar reservación por código
+      description: Requiere el permiso `reservations:read-own`.
+      parameters:
+        - name: codigo
+          in: path
+          required: true
+          description: Código de reservación.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalle de la reservación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/reservaciones/{id}/pausar:
+    patch:
+      tags: [Reservaciones]
+      summary: Pausar reservación propia
+      description: Requiere el permiso `reservations:manage-own`.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Reservación pausada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/reservaciones/{id}/confirmar:
+    patch:
+      tags: [Reservaciones]
+      summary: Confirmar reservación propia
+      description: Requiere el permiso `reservations:manage-own`.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Reservación confirmada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/reservaciones/{id}/cancelar:
+    patch:
+      tags: [Reservaciones]
+      summary: Cancelar reservación propia
+      description: Requiere el permiso `reservations:manage-own`.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Reservación cancelada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/reservaciones/admin/{id}/cancelar:
+    patch:
+      tags: [Reservaciones]
+      summary: Cancelar reservación como administrador
+      description: Requiere el permiso `reservations:manage-all`.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Reservación cancelada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/asistencias/registrar:
+    post:
+      tags: [Asistencias]
+      summary: Registrar asistencia
+      description: Requiere el permiso `attendance:register`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsistenciaRequest'
+      responses:
+        '200':
+          description: Asistencia registrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsistenciaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/notificaciones/mis:
+    get:
+      tags: [Notificaciones]
+      summary: Listar mis notificaciones
+      responses:
+        '200':
+          description: Notificaciones del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/notificaciones/mis/no-leidas:
+    get:
+      tags: [Notificaciones]
+      summary: Contar mis notificaciones no leídas
+      responses:
+        '200':
+          description: Cantidad de notificaciones no leídas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [noLeidas]
+                properties:
+                  noLeidas:
+                    type: integer
+                    format: int64
+                    example: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/notificaciones/{id}/leer:
+    patch:
+      tags: [Notificaciones]
+      summary: Marcar notificación como leída
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Notificación actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/usuarios:
+    get:
+      tags: [Usuarios]
+      summary: Listar usuarios
+      description: Requiere el permiso `users:read`.
+      parameters:
+        - name: rol
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtra por rol.
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filtra por estado de la cuenta.
+        - name: page
+          in: query
+          required: false
+          description: Número de página, comenzando en 1.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          description: Cantidad de registros por página.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Página de usuarios.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioPageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Usuarios]
+      summary: Crear usuario
+      description: Requiere el permiso `users:create`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioCreateRequest'
+      responses:
+        '201':
+          description: Usuario creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/usuarios/{id}:
+    get:
+      tags: [Usuarios]
+      summary: Consultar usuario
+      description: Requiere el permiso `users:read`.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Datos del usuario.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Usuarios]
+      summary: Actualizar usuario
+      description: Requiere el permiso `users:update`.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioUpdateRequest'
+      responses:
+        '200':
+          description: Usuario actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Usuarios]
+      summary: Eliminar usuario
+      description: Requiere el permiso `users:delete`.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '204':
+          description: Usuario eliminado.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/usuarios/{id}/estado:
+    patch:
+      tags: [Usuarios]
+      summary: Cambiar estado de usuario
+      description: Requiere el permiso `users:state`.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioEstadoRequest'
+      responses:
+        '200':
+          description: Estado de usuario actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/roles:
+    get:
+      tags: [Roles]
+      summary: Listar roles y permisos
+      description: Requiere el permiso `roles:read`.
+      responses:
+        '200':
+          description: Roles disponibles con sus permisos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RolResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/roles/{id}/permisos:
+    put:
+      tags: [Roles]
+      summary: Actualizar permisos de un rol
+      description: Requiere el permiso `roles:update`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador del rol.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarPermisosRequest'
+      responses:
+        '200':
+          description: Rol actualizado con sus permisos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Introduce el JWT obtenido en POST /api/v1/auth/login.
+  parameters:
+    IdLong:
+      name: id
+      in: path
+      required: true
+      description: Identificador numérico del recurso.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+  responses:
+    BadRequest:
+      description: Solicitud inválida o datos que no cumplen las validaciones.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Falta autenticación o el token JWT no es válido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: El usuario autenticado no tiene el permiso requerido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: No se encontró el recurso solicitado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflicto de negocio o de integridad de datos.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Error inesperado del servidor.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, contrasena]
+      properties:
+        email:
+          type: string
+          format: email
+          example: usuario@ejemplo.com
+        contrasena:
+          type: string
+          format: password
+          writeOnly: true
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT para enviar como Bearer token.
+        nombre:
+          type: string
+        apellido:
+          type: string
+          nullable: true
+        rol:
+          type: string
+        idUsuario:
+          type: integer
+          format: int64
+    RegistroRequest:
+      type: object
+      required: [nombre, email, contrasena]
+      properties:
+        nombre:
+          type: string
+        apellido:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+        telefono:
+          type: string
+          nullable: true
+          pattern: '^$|^[0-9+()\-\\s]{6,30}$'
+        codigoPais:
+          type: string
+          nullable: true
+          pattern: '^$|^\\+?[0-9]{1,4}$'
+          example: '+503'
+        contrasena:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 8
+          maxLength: 72
+    RecuperarContrasenaRequest:
+      type: object
+      required: [email, nombreOAlias]
+      properties:
+        email:
+          type: string
+        nombreOAlias:
+          type: string
+    CambiarContrasenaRequest:
+      type: object
+      required: [contrasenaActual, contrasenaNueva]
+      properties:
+        contrasenaActual:
+          type: string
+          format: password
+          writeOnly: true
+        contrasenaNueva:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 8
+          maxLength: 72
+    EventoRequest:
+      type: object
+      required: [nombre, fecha, horaInicio, capacidadMaxima, idUbicacion]
+      properties:
+        nombre:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        fecha:
+          type: string
+          format: date
+          description: Fecha actual o futura.
+          example: '2026-12-15'
+        horaInicio:
+          type: string
+          format: time
+          example: '09:30:00'
+        horaFin:
+          type: string
+          format: time
+          nullable: true
+          example: '12:00:00'
+        capacidadMaxima:
+          type: integer
+          minimum: 1
+        idUbicacion:
+          type: integer
+          format: int64
+    EventoResponse:
+      type: object
+      properties:
+        idEvento:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        fecha:
+          type: string
+          format: date
+        horaInicio:
+          type: string
+          format: time
+        horaFin:
+          type: string
+          format: time
+          nullable: true
+        capacidadMaxima:
+          type: integer
+        estado:
+          type: string
+        idUbicacion:
+          type: integer
+          format: int64
+        ubicacionNombre:
+          type: string
+          nullable: true
+        idOrganizador:
+          type: integer
+          format: int64
+          nullable: true
+        organizadorNombre:
+          type: string
+          nullable: true
+        cuposDisponibles:
+          type: integer
+          format: int64
+    UbicacionRequest:
+      type: object
+      required: [nombre]
+      properties:
+        nombre:
+          type: string
+        direccion:
+          type: string
+          nullable: true
+        tipo:
+          type: string
+          nullable: true
+        enlaceVirtual:
+          type: string
+          nullable: true
+    UbicacionResponse:
+      type: object
+      properties:
+        idUbicacion:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        direccion:
+          type: string
+          nullable: true
+        tipo:
+          type: string
+          nullable: true
+        enlaceVirtual:
+          type: string
+          nullable: true
+    RecursoRequest:
+      type: object
+      required: [nombre, cantidad]
+      properties:
+        nombre:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        cantidad:
+          type: integer
+          minimum: 1
+        tipo:
+          type: string
+          nullable: true
+        estado:
+          type: string
+          nullable: true
+    RecursoResponse:
+      type: object
+      properties:
+        idRecurso:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        cantidad:
+          type: integer
+        tipo:
+          type: string
+          nullable: true
+        estado:
+          type: string
+          nullable: true
+    ReservacionResponse:
+      type: object
+      properties:
+        idReservacion:
+          type: integer
+          format: int64
+        codigoReservacion:
+          type: string
+        estado:
+          type: string
+        fechaReservacion:
+          type: string
+          format: date
+        idEvento:
+          type: integer
+          format: int64
+        eventoNombre:
+          type: string
+          nullable: true
+        eventoFecha:
+          type: string
+          format: date
+          nullable: true
+        eventoHoraInicio:
+          type: string
+          format: time
+          nullable: true
+        participanteNombre:
+          type: string
+          nullable: true
+    AsistenciaRequest:
+      type: object
+      required: [codigoReservacion]
+      properties:
+        codigoReservacion:
+          type: string
+    AsistenciaResponse:
+      type: object
+      properties:
+        idAsistencia:
+          type: integer
+          format: int64
+        estado:
+          type: string
+        fechaAsistencia:
+          type: string
+          format: date
+        horaAsistencia:
+          type: string
+          format: time
+        eventoNombre:
+          type: string
+          nullable: true
+    NotificacionResponse:
+      type: object
+      properties:
+        idNotificacion:
+          type: integer
+          format: int64
+        mensaje:
+          type: string
+        tipo:
+          type: string
+        leido:
+          type: boolean
+        fechaEnvio:
+          type: string
+          format: date-time
+    UsuarioCreateRequest:
+      type: object
+      required: [nombre, apellido, email, telefono, codigoPais, contrasena, rol]
+      properties:
+        nombre:
+          type: string
+          maxLength: 100
+        apellido:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        telefono:
+          type: string
+          maxLength: 30
+        codigoPais:
+          type: string
+          maxLength: 10
+        contrasena:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 8
+          maxLength: 72
+        rol:
+          type: string
+    UsuarioUpdateRequest:
+      type: object
+      required: [nombre, apellido, email, telefono, codigoPais]
+      properties:
+        nombre:
+          type: string
+          maxLength: 100
+        apellido:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        telefono:
+          type: string
+          maxLength: 30
+        codigoPais:
+          type: string
+          maxLength: 10
+    UsuarioEstadoRequest:
+      type: object
+      required: [estado]
+      properties:
+        estado:
+          type: boolean
+    UsuarioResponse:
+      type: object
+      properties:
+        idUsuario:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        apellido:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+        telefono:
+          type: string
+          nullable: true
+        codigoPais:
+          type: string
+          nullable: true
+        estado:
+          type: boolean
+        rol:
+          type: string
+        fechaRegistro:
+          type: string
+          format: date-time
+    UsuarioPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioResponse'
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+    RolResponse:
+      type: object
+      properties:
+        idRol:
+          type: string
+        nombre:
+          type: string
+        permisos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermisoResponse'
+    PermisoResponse:
+      type: object
+      properties:
+        idPermiso:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+    ActualizarPermisosRequest:
+      type: object
+      required: [permisos]
+      properties:
+        permisos:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
