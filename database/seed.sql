@@ -7,6 +7,9 @@
 
 USE siger;
 
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
 -- Usuarios base (mantener los tres existentes tal como están)
 INSERT INTO usuario (nombre, apellido, email, telefono, codigoPais, contrasena, estado) VALUES
   ('Administrador',     'General',   'admin@siger.com', '+503', 'SV', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68u5jQ1Vu2Hfe', TRUE),

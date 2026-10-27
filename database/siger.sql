@@ -194,14 +194,14 @@ CREATE TABLE evento_recurso (
 -- -----------------------------------------------------------------------------
 CREATE TABLE reporte (
   idReporte       BIGINT       NOT NULL AUTO_INCREMENT,
+  idUsuario       BIGINT       NOT NULL,
   tipo            VARCHAR(50)  NOT NULL,
   parametro       VARCHAR(255),
   contenido       TEXT,
   fechaGeneracion DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  idAdministrador BIGINT       NOT NULL,
   PRIMARY KEY (idReporte),
-  CONSTRAINT fk_rep_admin FOREIGN KEY (idAdministrador)
-    REFERENCES administrador(idUsuario)
+  CONSTRAINT fk_rep_usuario FOREIGN KEY (idUsuario)
+    REFERENCES usuario(idUsuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------------------------------------------------------
