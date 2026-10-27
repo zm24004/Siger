@@ -7,7 +7,10 @@ import java.util.List;
 
 public interface NotificacionRepository extends JpaRepository<Notificacion, Long> {
 
-    List<Notificacion> findByUsuario_IdUsuarioOrderByFechaEnvioDesc(Long idUsuario);
+    List<Notificacion> findByUsuario_IdUsuarioOrderByLeidoAscFechaEnvioDesc(Long idUsuario);
 
     long countByUsuario_IdUsuarioAndLeidoFalse(Long idUsuario);
+
+    java.util.Optional<Notificacion> findByIdNotificacionAndUsuario_IdUsuario(
+        Long idNotificacion, Long idUsuario);
 }

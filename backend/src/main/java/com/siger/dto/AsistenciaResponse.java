@@ -8,6 +8,9 @@ public record AsistenciaResponse(
     String estado,
     LocalDate fechaAsistencia,
     LocalTime horaAsistencia,
-    String eventoNombre
+    Long idEvento,
+    String eventoNombre,
+    String codigoReservacion,
+    String participanteNombre
 ) {
 }

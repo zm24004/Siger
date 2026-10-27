@@ -2,9 +2,12 @@ package com.siger.security;
 
 import com.siger.config.SecurityConfig;
 import com.siger.controller.EventoController;
+import com.siger.controller.RecursoController;
+import com.siger.controller.UbicacionController;
 import com.siger.controller.UsuarioController;
 import com.siger.dto.EventoRequest;
 import com.siger.dto.EventoResponse;
+import com.siger.dto.PageResponse;
 import com.siger.dto.UsuarioPageResponse;
 import com.siger.model.Administrador;
 import com.siger.model.Organizador;
@@ -15,6 +18,8 @@ import com.siger.model.Usuario;
 import com.siger.repository.RolRepository;
 import com.siger.repository.UsuarioRepository;
 import com.siger.service.EventoService;
+import com.siger.service.RecursoService;
+import com.siger.service.UbicacionService;
 import com.siger.service.UsuarioService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,8 +49,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Pruebas de la configuracion de seguridad ({@link SecurityConfig}) usando
  * MockMvc con el slice {@code @WebMvcTest}.
  *
- * <p>Se cargan los controladores reales ({@link EventoController} y
- * {@link UsuarioController}) junto con la cadena de filtros de Spring Security
+ * <p>Se cargan los controladores reales ({@link EventoController},
+ * {@link UsuarioController}, {@link UbicacionController} y {@link RecursoController})
+ * junto con la cadena de filtros de Spring Security
  * ({@code SecurityFilterChain}, {@link JwtFilter}, {@link JwtService},
  * {@link UserDetailsServiceImpl} y los handlers 401/403). Los servicios y
  * {@link UsuarioRepository} se reemplazan por mocks de Mockito.
@@ -58,7 +64,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * {@code @PreAuthorize} (PARTICIPANTE 403, ORGANIZADOR 200, ADMINISTRADOR 200)
  * y validacion de Bean Validation (400) tras pasar la autorizacion.
  */
-@WebMvcTest(controllers = {EventoController.class, UsuarioController.class})
+@WebMvcTest(controllers = {
+        EventoController.class, UsuarioController.class, UbicacionController.class, RecursoController.class
+})
 @Import({
     SecurityConfig.class,
     JwtFilter.class,
@@ -75,6 +83,8 @@ class SecurityConfigTest {
 
     @MockitoBean EventoService eventoService;
     @MockitoBean UsuarioService usuarioService;
+    @MockitoBean UbicacionService ubicacionService;
+    @MockitoBean RecursoService recursoService;
     @MockitoBean UsuarioRepository usuarioRepository;
     @MockitoBean RolRepository rolRepository;
     @MockitoBean TokenRevocationService tokenRevocationService;
@@ -113,9 +123,15 @@ class SecurityConfigTest {
             case "ADMINISTRADOR" -> Set.of(Permisos.USERS_READ, Permisos.USERS_CREATE,
                     Permisos.USERS_UPDATE, Permisos.USERS_STATE, Permisos.USERS_DELETE,
                     Permisos.ROLES_READ, Permisos.ROLES_UPDATE,
-                    Permisos.RESERVATIONS_READ_ALL, Permisos.RESERVATIONS_MANAGE_ALL);
-            case "ORGANIZADOR" -> Set.of(Permisos.EVENTS_MANAGE, Permisos.LOCATIONS_CREATE,
+                    Permisos.EVENTS_MANAGE,
+                    Permisos.RESERVATIONS_READ_ALL, Permisos.RESERVATIONS_MANAGE_ALL,
+                    Permisos.LOCATIONS_READ, Permisos.LOCATIONS_CREATE,
+                    Permisos.LOCATIONS_UPDATE, Permisos.LOCATIONS_DELETE,
                     Permisos.RESOURCES_READ, Permisos.RESOURCES_CREATE,
+                    Permisos.RESOURCES_UPDATE, Permisos.RESOURCES_DELETE);
+            case "ORGANIZADOR" -> Set.of(Permisos.EVENTS_MANAGE, Permisos.LOCATIONS_CREATE,
+                    Permisos.LOCATIONS_READ, Permisos.LOCATIONS_UPDATE,
+                    Permisos.RESOURCES_READ, Permisos.RESOURCES_CREATE, Permisos.RESOURCES_UPDATE,
                     Permisos.ATTENDANCE_REGISTER);
             default -> Set.of(Permisos.RESERVATIONS_CREATE, Permisos.RESERVATIONS_READ_OWN,
                     Permisos.RESERVATIONS_MANAGE_OWN);
@@ -161,7 +177,7 @@ class SecurityConfigTest {
     @Test
     @DisplayName("GET /api/eventos sin token -> 200 (permitAll)")
     void getEventos_sinToken_retorna200() throws Exception {
-        when(eventoService.catalogoActivos()).thenReturn(List.of());
+        when(eventoService.catalogo(null, null, null, null)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/eventos"))
                 .andExpect(status().isOk());
@@ -193,6 +209,15 @@ class SecurityConfigTest {
     @DisplayName("GET /api/v1/usuarios sin token -> 401")
     void getUsuarios_sinToken_retorna401() throws Exception {
         mockMvc.perform(get("/api/v1/usuarios"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/ubicaciones y /api/v1/recursos sin token -> 401")
+    void getCatalogos_sinToken_retorna401() throws Exception {
+        mockMvc.perform(get("/api/v1/ubicaciones"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/recursos"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -259,8 +284,8 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("POST /api/eventos con token ORGANIZADOR y body valido -> 200")
-    void postEventos_conOrganizadorBodyValido_retorna200() throws Exception {
+    @DisplayName("POST /api/eventos con token ORGANIZADOR y body valido -> 201")
+    void postEventos_conOrganizadorBodyValido_retorna201() throws Exception {
         usuarioExiste("org@test.x", "ORGANIZADOR");
         when(eventoService.crear(any(EventoRequest.class), anyString()))
                 .thenReturn(eventoResponse());
@@ -269,7 +294,7 @@ class SecurityConfigTest {
                         .header("Authorization", "Bearer " + tokenPara("org@test.x", "ORGANIZADOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(BODY_VALIDO))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
     }
 
     @Test
@@ -304,6 +329,74 @@ class SecurityConfigTest {
         mockMvc.perform(get("/api/v1/usuarios")
                         .header("Authorization", "Bearer " + tokenPara("admin@test.x", "ADMINISTRADOR")))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/ubicaciones exige autenticación y permiso de lectura")
+    void getUbicaciones_conOrganizador_retorna200() throws Exception {
+        usuarioExiste("org@test.x", "ORGANIZADOR");
+        when(ubicacionService.listar("Virtual", 1, 20))
+                .thenReturn(new PageResponse<>(List.of(), 1, 20, 0, 0));
+
+        mockMvc.perform(get("/api/v1/ubicaciones")
+                        .param("tipo", "Virtual")
+                        .header("Authorization", "Bearer " + tokenPara("org@test.x", "ORGANIZADOR")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/recursos admite lectura para ORGANIZADOR")
+    void getRecursos_conOrganizador_retorna200() throws Exception {
+        usuarioExiste("org@test.x", "ORGANIZADOR");
+        when(recursoService.listar(1, 20))
+                .thenReturn(new PageResponse<>(List.of(), 1, 20, 0, 0));
+
+        mockMvc.perform(get("/api/v1/recursos")
+                        .header("Authorization", "Bearer " + tokenPara("org@test.x", "ORGANIZADOR")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/ubicaciones/{id} queda reservado a ADMINISTRADOR")
+    void deleteUbicaciones_conOrganizador_retorna403() throws Exception {
+        usuarioExiste("org@test.x", "ORGANIZADOR");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/v1/ubicaciones/1")
+                        .header("Authorization", "Bearer " + tokenPara("org@test.x", "ORGANIZADOR")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/recursos con PARTICIPANTE -> 403")
+    void getRecursos_conParticipante_retorna403() throws Exception {
+        usuarioExiste("part@test.x", "PARTICIPANTE");
+
+        mockMvc.perform(get("/api/v1/recursos")
+                        .header("Authorization", "Bearer " + tokenPara("part@test.x", "PARTICIPANTE")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/ubicaciones/{id} permite ADMINISTRADOR")
+    void deleteUbicaciones_conAdministrador_retorna204() throws Exception {
+        usuarioExiste("admin@test.x", "ADMINISTRADOR");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/v1/ubicaciones/1")
+                        .header("Authorization", "Bearer " + tokenPara("admin@test.x", "ADMINISTRADOR")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/recursos/{id} permite ADMINISTRADOR")
+    void deleteRecursos_conAdministrador_retorna204() throws Exception {
+        usuarioExiste("admin@test.x", "ADMINISTRADOR");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/v1/recursos/1")
+                        .header("Authorization", "Bearer " + tokenPara("admin@test.x", "ADMINISTRADOR")))
+                .andExpect(status().isNoContent());
     }
 
     @Test

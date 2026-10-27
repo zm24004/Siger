@@ -8,6 +8,7 @@ import com.siger.dto.auth.RecuperarContrasenaRequest;
 import com.siger.dto.auth.RegistroRequest;
 import com.siger.exception.BusinessException;
 import com.siger.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +39,10 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @Operation(
+        summary = "Registrar usuario",
+        description = "Crea una cuenta como PARTICIPANTE u ORGANIZADOR según el campo rol."
+    )
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegistroRequest request) {
         return ResponseEntity.status(201).body(authService.registro(request));
     }

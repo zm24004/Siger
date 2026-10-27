@@ -42,6 +42,6 @@ public class Reporte {
     private LocalDateTime fechaGeneracion;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "idAdministrador", nullable = false)
-    private Administrador administrador;
+    @JoinColumn(name = "idUsuario", nullable = false)
+    private Usuario creador;
 }

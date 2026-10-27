@@ -1,6 +1,7 @@
 package com.siger.controller;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -36,5 +37,10 @@ public final class SecurityUtils {
             throw new IllegalStateException("No hay usuario autenticado en el contexto de seguridad.");
         }
         return email;
+    }
+
+    public static boolean hasAuthority(String authority) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().contains(new SimpleGrantedAuthority(authority));
     }
 }

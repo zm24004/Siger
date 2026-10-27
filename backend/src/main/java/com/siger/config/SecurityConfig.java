@@ -64,9 +64,6 @@ public class SecurityConfig {
                 // Public read-only access to events catalogue (collection + item + subpaths)
                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                     "/api/eventos", "/api/eventos/**").permitAll()
-                // Public list of locations (catalogue)
-                .requestMatchers(org.springframework.http.HttpMethod.GET,
-                    "/api/ubicaciones", "/api/ubicaciones/**").permitAll()
                 // User management is admin-only
                 .requestMatchers("/api/v1/usuarios/**", "/api/v1/roles/**").authenticated()
                 // OpenAPI / Swagger

@@ -11,21 +11,42 @@ info:
 servers:
   - url: http://localhost:8080
     description: Servidor local
+x-websocket:
+  endpoint: /ws-notificaciones
+  protocol: STOMP over WebSocket/SockJS
+  authentication:
+    frame: CONNECT
+    header: Authorization
+    scheme: Bearer
+    tokenSource: JWT returned by the REST login endpoint
+  subscriptions:
+    - destination: /user/queue/notificaciones
+      payload:
+        $ref: '#/components/schemas/NotificacionResponse'
+  description: |
+    El cliente conecta a /ws-notificaciones, autentica el frame STOMP CONNECT
+    con el JWT de la API y se suscribe a /user/queue/notificaciones. Las
+    notificaciones quedan persistidas y también están disponibles mediante
+    los endpoints REST del usuario autenticado.
 tags:
   - name: Autenticación
     description: Registro, inicio y administración de sesión.
   - name: Eventos
-    description: Catálogo público y administración de eventos.
+    description: Catálogo público, administración propia, cupos, recursos y cambios notificados por WebSocket.
   - name: Ubicaciones
-    description: Catálogo y creación de ubicaciones.
+    description: CRUD de ubicaciones, filtrado y consulta paginada.
   - name: Recursos
-    description: Consulta y creación de recursos.
+    description: CRUD y consulta paginada de recursos.
   - name: Reservaciones
     description: Reservaciones propias y administración.
   - name: Asistencias
     description: Registro de asistencia a eventos.
   - name: Notificaciones
     description: Notificaciones del usuario autenticado.
+  - name: Reportes
+    description: Generación, consulta y exportación de reportes propios o globales.
+  - name: Estadísticas
+    description: Métricas agregadas de eventos y reservaciones según alcance autorizado.
   - name: Usuarios
     description: Administración de usuarios.
   - name: Roles
@@ -157,17 +178,43 @@ paths:
     get:
       tags: [Eventos]
       summary: Listar catálogo de eventos
-      description: Operación pública que devuelve el catálogo de eventos activos.
+      description: |
+        Operación pública. De forma predeterminada muestra eventos activos desde hoy.
+        Puede filtrarse por intervalo de fechas, estado y ubicación.
       security: []
+      parameters:
+        - name: fechaDesde
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: fechaHasta
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: estado
+          in: query
+          description: Si se omite, se filtran eventos Activos.
+          schema:
+            type: string
+        - name: idUbicacion
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
       responses:
         '200':
-          description: Eventos activos.
+          description: Eventos que coinciden con los filtros.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/EventoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
     post:
       tags: [Eventos]
       summary: Crear evento
@@ -179,7 +226,7 @@ paths:
             schema:
               $ref: '#/components/schemas/EventoRequest'
       responses:
-        '200':
+        '201':
           description: Evento creado.
           content:
             application/json:
@@ -213,6 +260,30 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/organizadores/{id}/eventos:
+    get:
+      tags: [Eventos]
+      summary: Listar eventos de un organizador
+      description: El organizador solo puede consultar sus eventos; el administrador puede consultar cualquiera.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Eventos del organizador.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/eventos/{id}:
     get:
       tags: [Eventos]
@@ -230,11 +301,57 @@ paths:
                 $ref: '#/components/schemas/EventoResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Eventos]
+      summary: Actualizar evento
+      description: Requiere `events:manage` y que el usuario sea el organizador dueño. No permite cambiar eventos cancelados o finalizados.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventoRequest'
+      responses:
+        '200':
+          description: Evento actualizado; se notifica a participantes con reservación activa.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/eventos/{id}/disponibilidad:
+    get:
+      tags: [Eventos]
+      summary: Consultar cupos disponibles
+      description: Cuenta las reservaciones pendientes, confirmadas y pausadas.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Capacidad, cupos ocupados y disponibles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoDisponibilidadResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/eventos/{id}/cancelar:
     patch:
       tags: [Eventos]
       summary: Cancelar evento
-      description: Requiere el permiso `events:manage`.
+      description: Requiere `events:manage` y ser el organizador dueño. Notifica a participantes con reservación activa.
       parameters:
         - $ref: '#/components/parameters/IdLong'
       responses:
@@ -252,25 +369,217 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/ubicaciones:
-    get:
-      tags: [Ubicaciones]
-      summary: Listar ubicaciones
-      description: Operación pública que devuelve las ubicaciones disponibles.
-      security: []
+  /api/eventos/{id}/reprogramar:
+    patch:
+      tags: [Eventos]
+      summary: Reprogramar evento
+      description: Requiere `events:manage` y ser el organizador dueño. Notifica a participantes con reservación activa.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReprogramarEventoRequest'
       responses:
         '200':
-          description: Ubicaciones disponibles.
+          description: Evento reprogramado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/eventos/{id}/finalizar:
+    patch:
+      tags: [Eventos]
+      summary: Finalizar evento
+      description: Requiere `events:manage` y ser el organizador dueño. Notifica a participantes con reservación activa.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Evento finalizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/eventos/{id}/recursos:
+    get:
+      tags: [Eventos]
+      summary: Listar recursos asignados
+      description: Requiere `events:manage` y ser el organizador dueño.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Recursos y cantidades asignadas al evento.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/UbicacionResponse'
+                  $ref: '#/components/schemas/EventoRecursoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Eventos]
+      summary: Asignar recurso al evento
+      description: Requiere `events:manage`, ser el organizador dueño y que exista inventario disponible.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventoRecursoRequest'
+      responses:
+        '201':
+          description: Recurso asignado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoRecursoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/eventos/{id}/recursos/{idRecurso}:
+    put:
+      tags: [Eventos]
+      summary: Actualizar cantidad del recurso asignado
+      description: Requiere `events:manage`, ser el organizador dueño y que exista inventario disponible.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+        - name: idRecurso
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventoRecursoCantidadRequest'
+      responses:
+        '200':
+          description: Asignación actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoRecursoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Eventos]
+      summary: Quitar recurso del evento
+      description: Requiere `events:manage` y ser el organizador dueño.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+        - name: idRecurso
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Recurso quitado del evento.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/ubicaciones:
+    get:
+      tags: [Ubicaciones]
+      summary: Listar ubicaciones
+      description: Requiere el permiso `locations:read` (Administrador u Organizador).
+      parameters:
+        - name: tipo
+          in: query
+          required: false
+          description: Filtra por tipo, sin distinguir mayúsculas y minúsculas.
+          schema:
+            type: string
+            maxLength: 50
+        - name: page
+          in: query
+          required: false
+          description: Número de página, basado en 1.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          description: Cantidad de elementos por página.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Página de ubicaciones.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UbicacionPageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       tags: [Ubicaciones]
       summary: Crear ubicación
-      description: Requiere el permiso `locations:create`.
+      description: Requiere el permiso `locations:create` (Administrador u Organizador).
       requestBody:
         required: true
         content:
@@ -278,7 +587,7 @@ paths:
             schema:
               $ref: '#/components/schemas/UbicacionRequest'
       responses:
-        '200':
+        '201':
           description: Ubicación creada.
           content:
             application/json:
@@ -292,20 +601,111 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/recursos:
+  /api/v1/ubicaciones/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador positivo de la ubicación.
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
     get:
-      tags: [Recursos]
-      summary: Listar recursos
-      description: Requiere el permiso `resources:read`.
+      tags: [Ubicaciones]
+      summary: Consultar ubicación
+      description: Requiere el permiso `locations:read` (Administrador u Organizador).
       responses:
         '200':
-          description: Recursos registrados.
+          description: Ubicación encontrada.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/RecursoResponse'
+                $ref: '#/components/schemas/UbicacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Ubicaciones]
+      summary: Actualizar ubicación
+      description: Requiere el permiso `locations:update` (Administrador u Organizador).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UbicacionRequest'
+      responses:
+        '200':
+          description: Ubicación actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UbicacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Ubicaciones]
+      summary: Eliminar ubicación
+      description: |
+        Requiere el permiso `locations:delete` (solo Administrador).
+        No elimina ubicaciones asociadas a eventos.
+      responses:
+        '204':
+          description: Ubicación eliminada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/recursos:
+    get:
+      tags: [Recursos]
+      summary: Listar recursos
+      description: Requiere el permiso `resources:read` (Administrador u Organizador).
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: Número de página, basado en 1.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          description: Cantidad de elementos por página.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Página de recursos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecursoPageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -313,7 +713,7 @@ paths:
     post:
       tags: [Recursos]
       summary: Crear recurso
-      description: Requiere el permiso `resources:create`.
+      description: Requiere el permiso `resources:create` (Administrador u Organizador).
       requestBody:
         required: true
         content:
@@ -321,7 +721,7 @@ paths:
             schema:
               $ref: '#/components/schemas/RecursoRequest'
       responses:
-        '200':
+        '201':
           description: Recurso creado.
           content:
             application/json:
@@ -335,21 +735,155 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/v1/recursos/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador positivo del recurso.
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+    get:
+      tags: [Recursos]
+      summary: Consultar recurso
+      description: Requiere el permiso `resources:read` (Administrador u Organizador).
+      responses:
+        '200':
+          description: Recurso encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecursoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Recursos]
+      summary: Actualizar recurso
+      description: Requiere el permiso `resources:update` (Administrador u Organizador).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecursoRequest'
+      responses:
+        '200':
+          description: Recurso actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecursoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Recursos]
+      summary: Eliminar recurso
+      description: |
+        Requiere el permiso `resources:delete` (solo Administrador).
+        No elimina recursos asignados a eventos.
+      responses:
+        '204':
+          description: Recurso eliminado.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/reservaciones:
+    post:
+      tags: [Reservaciones]
+      summary: Reservar un cupo
+      description: |
+        Requiere `reservations:create`. La creación bloquea el evento en una transacción
+        para evitar sobrecupos. Devuelve HTTP 201.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservacionRequest'
+            example:
+              idEvento: 12
+      responses:
+        '201':
+          description: Reservación creada y confirmada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    get:
+      tags: [Reservaciones]
+      summary: Listar reservaciones
+      description: |
+        Administradores consultan todas las reservaciones; organizadores solo las de
+        sus eventos. Admite filtrar por evento y estado.
+      parameters:
+        - name: idEvento
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [Pendiente, Confirmada, Pausada, Cancelada]
+      responses:
+        '200':
+          description: Reservaciones visibles para el usuario autenticado.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/reservaciones/evento/{idEvento}:
     post:
       tags: [Reservaciones]
-      summary: Reservar un evento
-      description: Requiere el permiso `reservations:create`.
+      summary: Reservar un evento (ruta compatible)
+      description: Ruta anterior conservada como alias de `POST /api/reservaciones`.
       parameters:
         - name: idEvento
           in: path
           required: true
-          description: Identificador del evento.
           schema:
             type: integer
             format: int64
       responses:
-        '200':
+        '201':
           description: Reservación creada.
           content:
             application/json:
@@ -367,10 +901,10 @@ paths:
     get:
       tags: [Reservaciones]
       summary: Listar mis reservaciones
-      description: Requiere el permiso `reservations:read-own`.
+      description: Ruta compatible para consultar las reservaciones del participante autenticado.
       responses:
         '200':
-          description: Reservaciones del usuario autenticado.
+          description: Reservaciones propias.
           content:
             application/json:
               schema:
@@ -381,36 +915,15 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/reservaciones:
+  /api/reservaciones/{id}:
     get:
       tags: [Reservaciones]
-      summary: Listar todas las reservaciones
-      description: Requiere el permiso `reservations:read-all`.
-      responses:
-        '200':
-          description: Reservaciones registradas.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ReservacionResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /api/reservaciones/{codigo}:
-    get:
-      tags: [Reservaciones]
-      summary: Consultar reservación por código
-      description: Requiere el permiso `reservations:read-own`.
+      summary: Consultar reservación por ID
+      description: |
+        Participantes consultan su propia reservación; organizadores, las de sus eventos;
+        administradores, cualquiera. Para compatibilidad, también acepta el código SIG-.
       parameters:
-        - name: codigo
-          in: path
-          required: true
-          description: Código de reservación.
-          schema:
-            type: string
+        - $ref: '#/components/parameters/IdLong'
       responses:
         '200':
           description: Detalle de la reservación.
@@ -424,11 +937,37 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/reservaciones/{id}/comprobante:
+    get:
+      tags: [Reservaciones]
+      summary: Descargar comprobante PDF
+      description: Solo el participante propietario puede descargar el comprobante.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Archivo PDF del comprobante.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Nombre sugerido del archivo descargado.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/reservaciones/{id}/pausar:
     patch:
       tags: [Reservaciones]
       summary: Pausar reservación propia
-      description: Requiere el permiso `reservations:manage-own`.
+      description: Requiere `reservations:manage-own`.
       parameters:
         - $ref: '#/components/parameters/IdLong'
       responses:
@@ -450,7 +989,7 @@ paths:
     patch:
       tags: [Reservaciones]
       summary: Confirmar reservación propia
-      description: Requiere el permiso `reservations:manage-own`.
+      description: Requiere `reservations:manage-own`.
       parameters:
         - $ref: '#/components/parameters/IdLong'
       responses:
@@ -471,8 +1010,8 @@ paths:
   /api/reservaciones/{id}/cancelar:
     patch:
       tags: [Reservaciones]
-      summary: Cancelar reservación propia
-      description: Requiere el permiso `reservations:manage-own`.
+      summary: Cancelar reservación
+      description: Participante propietario, organizador del evento o administrador.
       parameters:
         - $ref: '#/components/parameters/IdLong'
       responses:
@@ -493,8 +1032,8 @@ paths:
   /api/reservaciones/admin/{id}/cancelar:
     patch:
       tags: [Reservaciones]
-      summary: Cancelar reservación como administrador
-      description: Requiere el permiso `reservations:manage-all`.
+      summary: Cancelar reservación como administrador (ruta compatible)
+      description: Requiere `reservations:manage-all`.
       parameters:
         - $ref: '#/components/parameters/IdLong'
       responses:
@@ -512,11 +1051,67 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/asistencias/registrar:
+  /api/eventos/{idEvento}/reservaciones:
+    get:
+      tags: [Reservaciones]
+      summary: Listar reservaciones de un evento
+      description: Organizador propietario o administrador.
+      parameters:
+        - name: idEvento
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Reservaciones del evento.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/participantes/{idParticipante}/reservaciones:
+    get:
+      tags: [Reservaciones]
+      summary: Consultar historial de un participante
+      description: El participante solo consulta su historial; Administrador puede consultar cualquiera.
+      parameters:
+        - name: idParticipante
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Historial de reservaciones.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReservacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/asistencia:
     post:
       tags: [Asistencias]
       summary: Registrar asistencia
-      description: Requiere el permiso `attendance:register`.
+      description: |
+        Organizador propietario del evento. Solo permite reservaciones confirmadas
+        y serializa por reservación para impedir registros duplicados.
       requestBody:
         required: true
         content:
@@ -524,7 +1119,7 @@ paths:
             schema:
               $ref: '#/components/schemas/AsistenciaRequest'
       responses:
-        '200':
+        '201':
           description: Asistencia registrada.
           content:
             application/json:
@@ -540,10 +1135,140 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/asistencias/registrar:
+    post:
+      tags: [Asistencias]
+      summary: Registrar asistencia (ruta compatible)
+      description: Alias de `POST /api/asistencia`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsistenciaRequest'
+      responses:
+        '201':
+          description: Asistencia registrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsistenciaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/eventos/{idEvento}/asistencia:
+    get:
+      tags: [Asistencias]
+      summary: Listar asistencia de un evento
+      description: Organizador propietario o administrador.
+      parameters:
+        - name: idEvento
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Asistencias ordenadas por fecha y hora.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AsistenciaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/eventos/{idEvento}/asistencia/lista:
+    get:
+      tags: [Asistencias]
+      summary: Consultar lista de asistencia
+      description: Requiere ser el organizador propietario; devuelve JSON, no genera archivo PDF/Excel.
+      parameters:
+        - name: idEvento
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Lista de asistencias del evento.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AsistenciaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/asistencia/{id}:
+    get:
+      tags: [Asistencias]
+      summary: Consultar asistencia por ID
+      description: Organizador propietario o administrador.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Registro de asistencia.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsistenciaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Asistencias]
+      summary: Corregir estado de asistencia
+      description: Solo el organizador propietario; estado permitido Presente o Ausente.
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsistenciaUpdateRequest'
+      responses:
+        '200':
+          description: Estado de asistencia actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsistenciaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/notificaciones/mis:
     get:
       tags: [Notificaciones]
-      summary: Listar mis notificaciones
+      summary: Listar mis notificaciones (no leídas primero)
+      description: Compatibilidad de la ruta actual; cada usuario solo consulta su propia bandeja.
       responses:
         '200':
           description: Notificaciones del usuario autenticado.
@@ -555,6 +1280,35 @@ paths:
                   $ref: '#/components/schemas/NotificacionResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/notificaciones/{id}:
+    get:
+      tags: [Notificaciones]
+      summary: Consultar una notificación propia
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Notificación encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Notificaciones]
+      summary: Eliminar una notificación propia
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '204':
+          description: Notificación eliminada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/notificaciones/mis/no-leidas:
     get:
       tags: [Notificaciones]
@@ -574,10 +1328,11 @@ paths:
                     example: 3
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /api/notificaciones/{id}/leer:
+  /api/notificaciones/{id}/leida:
     patch:
       tags: [Notificaciones]
       summary: Marcar notificación como leída
+      description: La ruta `/leer` se mantiene como alias compatible.
       parameters:
         - $ref: '#/components/parameters/IdLong'
       responses:
@@ -589,6 +1344,243 @@ paths:
                 $ref: '#/components/schemas/NotificacionResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/notificaciones/{id}/leer:
+    patch:
+      tags: [Notificaciones]
+      summary: Alias compatible para marcar una notificación como leída
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Notificación actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/notificaciones/enviar:
+    post:
+      tags: [Notificaciones]
+      summary: Enviar recordatorio a reservantes de un evento
+      description: ADM puede enviar para cualquier evento; ORG solo para sus propios eventos. Se incluyen reservaciones Pendiente, Confirmada y Pausada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificacionEnvioRequest'
+      responses:
+        '201':
+          description: Recordatorio persistido y programado para entrega a cada reservante.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificacionEnvioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/reportes:
+    get:
+      tags: [Reportes]
+      summary: Listar reportes accesibles
+      description: ADM consulta todos los reportes; ORG consulta los generados por su cuenta.
+      responses:
+        '200':
+          description: Reportes ordenados por fecha de generación descendente.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReporteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Reportes]
+      summary: Generar y persistir un reporte
+      description: ORG solo puede filtrar sus eventos. Tipos soportados PARTICIPACION, EVENTOS_MAS_CONCURRIDOS y RESERVACIONES.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReporteRequest'
+      responses:
+        '201':
+          description: Reporte generado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReporteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/reportes/{id}:
+    get:
+      tags: [Reportes]
+      summary: Consultar un reporte accesible
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+      responses:
+        '200':
+          description: Reporte persistido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReporteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/reportes/{id}/exportar:
+    get:
+      tags: [Reportes]
+      summary: Descargar un reporte en PDF o Excel
+      parameters:
+        - $ref: '#/components/parameters/IdLong'
+        - name: formato
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [pdf, excel]
+      responses:
+        '200':
+          description: Archivo del reporte.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/estadisticas/participacion:
+    get:
+      tags: [Estadísticas]
+      summary: Consultar participación por evento
+      parameters:
+        - $ref: '#/components/parameters/FechaDesde'
+        - $ref: '#/components/parameters/FechaHasta'
+        - $ref: '#/components/parameters/IdEventoQuery'
+      responses:
+        '200':
+          description: Reservaciones activas y asistencias presentes por evento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadisticaParticipacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/estadisticas/eventos-mas-concurridos:
+    get:
+      tags: [Estadísticas]
+      summary: Obtener ranking de eventos por asistencia registrada
+      parameters:
+        - $ref: '#/components/parameters/FechaDesde'
+        - $ref: '#/components/parameters/FechaHasta'
+        - $ref: '#/components/parameters/IdEventoQuery'
+        - name: limite
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Eventos ordenados por asistentes presentes y, como desempate, reservaciones activas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadisticaRankingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/estadisticas/reservaciones:
+    get:
+      tags: [Estadísticas]
+      summary: Consultar reservaciones agrupadas por estado
+      parameters:
+        - $ref: '#/components/parameters/FechaDesde'
+        - $ref: '#/components/parameters/FechaHasta'
+        - $ref: '#/components/parameters/IdEventoQuery'
+      responses:
+        '200':
+          description: Totales por estado de reservación y total general.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadisticaReservacionesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/estadisticas/dashboard:
+    get:
+      tags: [Estadísticas]
+      summary: Consultar resumen de panel
+      parameters:
+        - $ref: '#/components/parameters/FechaDesde'
+        - $ref: '#/components/parameters/FechaHasta'
+        - $ref: '#/components/parameters/IdEventoQuery'
+      responses:
+        '200':
+          description: Totales de eventos, reservaciones activas y asistentes presentes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadisticaDashboardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /api/v1/usuarios:
@@ -826,6 +1818,28 @@ components:
         type: integer
         format: int64
         minimum: 1
+    FechaDesde:
+      name: fechaDesde
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+    FechaHasta:
+      name: fechaHasta
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+    IdEventoQuery:
+      name: idEvento
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
   responses:
     BadRequest:
       description: Solicitud inválida o datos que no cumplen las validaciones.
@@ -947,6 +1961,7 @@ components:
       properties:
         nombre:
           type: string
+          maxLength: 200
         descripcion:
           type: string
           nullable: true
@@ -970,8 +1985,25 @@ components:
         idUbicacion:
           type: integer
           format: int64
+          minimum: 1
+    ReprogramarEventoRequest:
+      type: object
+      required: [fecha, horaInicio]
+      properties:
+        fecha:
+          type: string
+          format: date
+          description: Fecha actual o futura.
+        horaInicio:
+          type: string
+          format: time
+        horaFin:
+          type: string
+          format: time
+          nullable: true
     EventoResponse:
       type: object
+      required: [idEvento, nombre, fecha, horaInicio, capacidadMaxima, estado, cuposDisponibles]
       properties:
         idEvento:
           type: integer
@@ -1011,23 +2043,77 @@ components:
         cuposDisponibles:
           type: integer
           format: int64
+    EventoDisponibilidadResponse:
+      type: object
+      required: [idEvento, capacidadMaxima, cuposOcupados, cuposDisponibles]
+      properties:
+        idEvento:
+          type: integer
+          format: int64
+        capacidadMaxima:
+          type: integer
+        cuposOcupados:
+          type: integer
+          format: int64
+        cuposDisponibles:
+          type: integer
+          format: int64
+    EventoRecursoRequest:
+      type: object
+      required: [idRecurso, cantidadAsignada]
+      properties:
+        idRecurso:
+          type: integer
+          format: int64
+          minimum: 1
+        cantidadAsignada:
+          type: integer
+          minimum: 1
+    EventoRecursoCantidadRequest:
+      type: object
+      required: [cantidadAsignada]
+      properties:
+        cantidadAsignada:
+          type: integer
+          minimum: 1
+    EventoRecursoResponse:
+      type: object
+      required: [idEvento, idRecurso, nombreRecurso, cantidadAsignada]
+      properties:
+        idEvento:
+          type: integer
+          format: int64
+        idRecurso:
+          type: integer
+          format: int64
+        nombreRecurso:
+          type: string
+        cantidadAsignada:
+          type: integer
     UbicacionRequest:
       type: object
       required: [nombre]
       properties:
         nombre:
           type: string
+          minLength: 1
+          maxLength: 150
         direccion:
           type: string
           nullable: true
+          maxLength: 255
         tipo:
           type: string
           nullable: true
+          maxLength: 50
+          description: Si se omite o está vacío, el valor predeterminado es Presencial.
         enlaceVirtual:
           type: string
           nullable: true
+          maxLength: 500
     UbicacionResponse:
       type: object
+      required: [idUbicacion, nombre, tipo]
       properties:
         idUbicacion:
           type: integer
@@ -1039,16 +2125,38 @@ components:
           nullable: true
         tipo:
           type: string
-          nullable: true
         enlaceVirtual:
           type: string
           nullable: true
+    UbicacionPageResponse:
+      type: object
+      description: Resultado paginado de ubicaciones.
+      required: [content, page, limit, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/UbicacionResponse'
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
     RecursoRequest:
       type: object
       required: [nombre, cantidad]
       properties:
         nombre:
           type: string
+          minLength: 1
+          maxLength: 150
         descripcion:
           type: string
           nullable: true
@@ -1058,11 +2166,16 @@ components:
         tipo:
           type: string
           nullable: true
+          maxLength: 50
+          description: Si se omite o está vacío, el valor predeterminado es General.
         estado:
           type: string
           nullable: true
+          maxLength: 20
+          description: Si se omite o está vacío, el valor predeterminado es Disponible.
     RecursoResponse:
       type: object
+      required: [idRecurso, nombre, cantidad, tipo, estado]
       properties:
         idRecurso:
           type: integer
@@ -1076,10 +2189,29 @@ components:
           type: integer
         tipo:
           type: string
-          nullable: true
         estado:
           type: string
-          nullable: true
+    RecursoPageResponse:
+      type: object
+      description: Resultado paginado de recursos.
+      required: [content, page, limit, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecursoResponse'
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
     ReservacionResponse:
       type: object
       properties:
@@ -1110,12 +2242,28 @@ components:
         participanteNombre:
           type: string
           nullable: true
+    ReservacionRequest:
+      type: object
+      required: [idEvento]
+      properties:
+        idEvento:
+          type: integer
+          format: int64
+          minimum: 1
     AsistenciaRequest:
       type: object
       required: [codigoReservacion]
       properties:
         codigoReservacion:
           type: string
+          minLength: 1
+    AsistenciaUpdateRequest:
+      type: object
+      required: [estado]
+      properties:
+        estado:
+          type: string
+          enum: [Presente, Ausente]
     AsistenciaResponse:
       type: object
       properties:
@@ -1130,9 +2278,16 @@ components:
         horaAsistencia:
           type: string
           format: time
+        idEvento:
+          type: integer
+          format: int64
         eventoNombre:
           type: string
           nullable: true
+        codigoReservacion:
+          type: string
+        participanteNombre:
+          type: string
     NotificacionResponse:
       type: object
       properties:
@@ -1148,6 +2303,141 @@ components:
         fechaEnvio:
           type: string
           format: date-time
+    NotificacionEnvioRequest:
+      type: object
+      required: [idEvento]
+      properties:
+        idEvento:
+          type: integer
+          format: int64
+          minimum: 1
+        mensaje:
+          type: string
+          maxLength: 1000
+          description: Si se omite, el backend genera el texto recordatorio.
+    NotificacionEnvioResponse:
+      type: object
+      properties:
+        idEvento:
+          type: integer
+          format: int64
+        notificacionesEnviadas:
+          type: integer
+          minimum: 0
+    ReporteRequest:
+      type: object
+      required: [tipo]
+      properties:
+        tipo:
+          type: string
+          enum: [PARTICIPACION, EVENTOS_MAS_CONCURRIDOS, RESERVACIONES]
+        fechaDesde:
+          type: string
+          format: date
+          nullable: true
+        fechaHasta:
+          type: string
+          format: date
+          nullable: true
+        idEvento:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+    ReporteResponse:
+      type: object
+      properties:
+        idReporte:
+          type: integer
+          format: int64
+        tipo:
+          type: string
+        parametro:
+          type: string
+          nullable: true
+        contenido:
+          type: string
+          description: Contenido del reporte serializado en JSON.
+        fechaGeneracion:
+          type: string
+          format: date-time
+        idCreador:
+          type: integer
+          format: int64
+        nombreCreador:
+          type: string
+    EstadisticaEventoResponse:
+      type: object
+      properties:
+        idEvento:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        fecha:
+          type: string
+          format: date
+        capacidadMaxima:
+          type: integer
+        reservacionesActivas:
+          type: integer
+          format: int64
+        asistentes:
+          type: integer
+          format: int64
+    EstadisticaParticipacionResponse:
+      type: object
+      properties:
+        eventos:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstadisticaEventoResponse'
+        totalReservaciones:
+          type: integer
+          format: int64
+        totalAsistentes:
+          type: integer
+          format: int64
+    EstadisticaRankingResponse:
+      type: object
+      properties:
+        eventos:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstadisticaEventoResponse'
+    ReservacionesPorEstadoResponse:
+      type: object
+      properties:
+        estado:
+          type: string
+        total:
+          type: integer
+          format: int64
+    EstadisticaReservacionesResponse:
+      type: object
+      properties:
+        porEstado:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservacionesPorEstadoResponse'
+        total:
+          type: integer
+          format: int64
+    EstadisticaDashboardResponse:
+      type: object
+      properties:
+        totalEventos:
+          type: integer
+          format: int64
+        totalReservaciones:
+          type: integer
+          format: int64
+        totalAsistentes:
+          type: integer
+          format: int64
+        porcentajeAsistencia:
+          type: number
+          format: double
     UsuarioCreateRequest:
       type: object
       required: [nombre, apellido, email, telefono, codigoPais, contrasena, rol]

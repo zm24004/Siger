@@ -6,8 +6,10 @@ import com.siger.dto.auth.AuthResponse;
 import com.siger.dto.auth.LoginRequest;
 import com.siger.dto.auth.RegistroRequest;
 import com.siger.exception.BusinessException;
+import com.siger.model.Organizador;
 import com.siger.model.Participante;
 import com.siger.model.Usuario;
+import com.siger.repository.OrganizadorRepository;
 import com.siger.repository.ParticipanteRepository;
 import com.siger.repository.UsuarioRepository;
 import com.siger.security.JwtService;
@@ -25,6 +27,7 @@ public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
     private final ParticipanteRepository participanteRepository;
+    private final OrganizadorRepository organizadorRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final TokenRevocationService tokenRevocationService;
@@ -50,18 +53,31 @@ public class AuthService {
             throw new BusinessException("Ya existe una cuenta con ese email.");
         }
 
-        Participante participante = new Participante();
-        participante.setNombre(request.nombre().trim());
-        participante.setApellido(request.apellido() == null ? "" : request.apellido().trim());
-        participante.setEmail(email);
-        participante.setTelefono(request.telefono() == null ? "" : request.telefono().trim());
-        participante.setCodigoPais(request.codigoPais() == null ? "" : request.codigoPais().trim());
-        participante.setContrasena(passwordEncoder.encode(request.contrasena()));
-        participante.setEstado(true);
+        String rol = request.rol() == null ? "" : request.rol().trim().toUpperCase(Locale.ROOT);
+        Usuario usuario = switch (rol) {
+            case "PARTICIPANTE" -> new Participante();
+            case "ORGANIZADOR" -> new Organizador();
+            default -> throw new BusinessException("El rol debe ser PARTICIPANTE u ORGANIZADOR.");
+        };
+        usuario.setNombre(request.nombre().trim());
+        usuario.setApellido(request.apellido() == null ? "" : request.apellido().trim());
+        usuario.setEmail(email);
+        usuario.setTelefono(request.telefono() == null ? "" : request.telefono().trim());
+        usuario.setCodigoPais(request.codigoPais() == null ? "" : request.codigoPais().trim());
+        usuario.setContrasena(passwordEncoder.encode(request.contrasena()));
+        usuario.setEstado(true);
 
-        Participante nuevo = participanteRepository.save(participante);
-        String token = jwtService.generar(nuevo.getEmail(), "PARTICIPANTE");
-        return new AuthResponse(token, nuevo.getNombre(), nuevo.getApellido(), "PARTICIPANTE", nuevo.getIdUsuario());
+        Usuario nuevo;
+        if (usuario instanceof Organizador organizador) {
+            nuevo = organizadorRepository.save(organizador);
+        } else if (usuario instanceof Participante participante) {
+            nuevo = participanteRepository.save(participante);
+        } else {
+            throw new IllegalStateException("Tipo de usuario de registro no soportado.");
+        }
+        String rolCreado = RolHelper.derivarRol(nuevo);
+        String token = jwtService.generar(nuevo.getEmail(), rolCreado);
+        return new AuthResponse(token, nuevo.getNombre(), nuevo.getApellido(), rolCreado, nuevo.getIdUsuario());
     }
 
     @Transactional(readOnly = true)

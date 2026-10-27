@@ -23,6 +23,13 @@ public record RegistroRequest(
 
     @NotBlank(message = "La contraseña es obligatoria")
     @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres")
-    String contrasena
+    String contrasena,
+
+    @NotBlank(message = "El rol es obligatorio")
+    @Pattern(
+        regexp = "(?i)^\\s*(PARTICIPANTE|ORGANIZADOR)\\s*$",
+        message = "El rol debe ser PARTICIPANTE u ORGANIZADOR"
+    )
+    String rol
 ) {
 }
