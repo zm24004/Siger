@@ -195,6 +195,17 @@ Verificar: [http://localhost:8080/actuator/health](http://localhost:8080/actuato
 ### Desde VS Code
 Usa las tareas `Backend: Run (./mvnw spring-boot:run)` o configura `launch.json` con las variables anteriores.
 
+### Usuarios de pruba
+Se crean despues de levantar el backend por primera vez con sus respectivos roles y permisos segun los casos de uso
+
+|usuario email | contraseña | role |
+|---|---|---|
+|admin@siger.com|Admin123|ADMINISTRADOR|
+|organizador@siger.com|Organizador123|ORGANIZADOR|
+|participante1@siger.com|Participante123|PARTICIPANTE|
+|participante2@siger.com|Participante123|PARTICIPANTE|
+
+
 ### 3) Configurar y levantar el Frontend
 
 ```bash
