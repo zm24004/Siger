@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # SIGER — reset-db.sh
-# Reinicia la base de datos desde cero ejecutando database/siger.sql
+# Reinicia la base de datos desde cero ejecutando primero el esquema y luego las semillas.
 # DESTRUCTIVO: borra y recrea la BD `siger`. No usar en producción.
 # =============================================================================
 set -euo pipefail
@@ -20,12 +20,17 @@ error() { echo -e "${C_RED}[ERROR]${C_RESET} $*" >&2; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SQL_FILE="${ROOT_DIR}/database/siger.sql"
+SEED_FILE="${ROOT_DIR}/database/seed.sql"
 
 # -----------------------------------------------------------------------------
 # Validar existencia del SQL
 # -----------------------------------------------------------------------------
 if [[ ! -f "${SQL_FILE}" ]]; then
     error "No se encontró ${SQL_FILE}"
+    exit 1
+fi
+if [[ ! -f "${SEED_FILE}" ]]; then
+    error "No se encontró ${SEED_FILE}"
     exit 1
 fi
 
@@ -53,17 +58,17 @@ if [[ "${FORCE_YES}" != "-y" && "${FORCE_YES}" != "--yes" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Ejecutar script SQL
+# Ejecutar primero el esquema y luego las semillas en una sola conexión
 # -----------------------------------------------------------------------------
-log "Ejecutando ${SQL_FILE} como ${MYSQL_ROOT_USER}..."
+log "Ejecutando ${SQL_FILE} y luego ${SEED_FILE} como ${MYSQL_ROOT_USER}..."
 if [[ -n "${MYSQL_ROOT_PASSWORD:-}" ]]; then
-    MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" mysql -u "${MYSQL_ROOT_USER}" -h localhost < "${SQL_FILE}"
+    cat "${SQL_FILE}" "${SEED_FILE}" | MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" mysql -u "${MYSQL_ROOT_USER}" -h localhost
 else
-    mysql -u "${MYSQL_ROOT_USER}" -h localhost -p < "${SQL_FILE}"
+    cat "${SQL_FILE}" "${SEED_FILE}" | mysql -u "${MYSQL_ROOT_USER}" -h localhost -p
 fi
 
 ok "Base de datos 'siger' reinicializada."
-ok "Tablas y datos semilla cargados desde siger.sql."
+ok "Esquema y datos semilla cargados."
 log "Recuerda recrear el usuario 'siger_app' si lo necesitas:"
 log "  CREATE USER 'siger_app'@'localhost' IDENTIFIED BY '<password>';"
 log "  GRANT ALL PRIVILEGES ON siger.* TO 'siger_app'@'localhost'; FLUSH PRIVILEGES;"

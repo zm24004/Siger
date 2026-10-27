@@ -43,7 +43,7 @@ SIGER (Sistema de Gestión de Reservas En Linea) es una aplicación web para que
 | Seguridad     | Spring Security + JWT            | HS256, expiración configurable           |
 | Real-time     | Spring WebSocket (STOMP)         | Notificaciones de reserva                |
 | Base de datos | MySQL                            | 8.0.16+ (`utf8mb4_unicode_ci`)           |
-| Migraciones   | SQL script único                 | `database/siger.sql` (origen de verdad)  |
+| Base de datos | Scripts SQL                      | `database/siger.sql` (esquema) y `database/seed.sql` (semillas) |
 | Frontend      | React + Vite                     | React 18, Vite 5                         |
 | UI            | TailwindCSS + shadcn/ui          | Componentes accesibles                   |
 | Estado        | Zustand / Context API            | Sesión JWT en memoria + `localStorage`   |
@@ -60,7 +60,8 @@ SIGER (Sistema de Gestión de Reservas En Linea) es una aplicación web para que
 ```
 siger/
 ├── database/
-│   └── siger.sql                  # Script SQL único (12 tablas + 1 vista + seed)
+│   ├── siger.sql                  # Base de datos, tablas, índices y vista
+│   └── seed.sql                   # Datos semilla
 ├── backend/
 │   ├── Dockerfile                 # Multi-stage: maven build -> JRE runtime
 │   ├── .dockerignore
@@ -97,7 +98,7 @@ siger/
 │       └── lib/                  # utilidades, constantes
 ├── scripts/
 │   ├── run-dev.sh                # Levanta MySQL + backend + frontend en dev
-│   └── reset-db.sh               # Reinicia la base de datos desde siger.sql
+│   └── reset-db.sh                # Reinicia la BD y carga esquema y semillas
 ├── .github/workflows/ci.yml      # CI en GitHub Actions
 ├── .gitignore
 ├── .env.example                  # Plantilla de variables de entorno
@@ -153,7 +154,7 @@ docker compose up -d db
 ```
 
 - MySQL quedará en `localhost:${MYSQL_PORT:-3306}`.
-- En el **primer arranque**, `database/siger.sql` se ejecuta automáticamente desde `/docker-entrypoint-initdb.d/01-siger.sql`.
+- En el **primer arranque**, Compose ejecuta `database/siger.sql` como `01-siger.sql` y luego `database/seed.sql` como `02-seed.sql`.
 - Usuario de app: `siger_app` con password `MYSQL_PASSWORD`. Si necesitas crearlo manualmente (caso BD externa/local): 
 
 ```sql
@@ -241,7 +242,7 @@ npm run dev                   # http://localhost:5173
 
 ## Levantar todo para simular entorno de producción (Docker Compose)
 
-Para simular un despliegue productivo, levanta **base de datos, backend y frontend juntos** con Docker. Se usan perfiles `prod`, build multi-stage, Nginx para el frontend, healthcheck en MySQL y `database/siger.sql` para inicializar la BD.
+Para simular un despliegue productivo, levanta **base de datos, backend y frontend juntos** con Docker. Se usan perfiles `prod`, build multi-stage, Nginx para el frontend, healthcheck en MySQL y los scripts `database/siger.sql` y `database/seed.sql` para inicializar la BD en ese orden.
 
 ### 1) Configurar variables
 Desde la raíz del repositorio:
@@ -296,13 +297,13 @@ docker compose up --build -d
 ```bash
 docker compose logs -f        # ver logs
 docker compose down          # parar conservando BD
-docker compose down -v       # parar y borrar volumen (re-ejecuta siger.sql)
+docker compose down -v       # parar y borrar volumen (re-ejecuta esquema y semillas)
 docker compose ps
 ```
 
 ### Notas rápidas
 - **Imagened docker Multi-stage:** Backend Maven→JRE (usuario no-root, healthcheck + `wait-for.sh`). Frontend Node→nginx con `nginx.conf` (SPA fallback + proxy `/api/` y `/ws-notificaciones/` con upgrade WS).
-- **Inicialización:** Solo primera vez del volumen, `database/siger.sql` se monta en `/docker-entrypoint-initdb.d/`.
+- **Inicialización:** Solo la primera vez del volumen se montan `/docker-entrypoint-initdb.d/01-siger.sql` y `/docker-entrypoint-initdb.d/02-seed.sql`; MySQL los ejecuta en orden alfabético.
 - **Perfiles:** En este modo se usa `prod` (`application-prod.yml` con `ddl-auto: none`, logs INFO, CORS por `SIGER_CORS_ORIGIN`).  
 
 ---
@@ -336,7 +337,7 @@ spring:
 - **No mezclar perfiles**: Para simular **producción con Docker**, usa **`SPRING_PROFILES_ACTIVE=prod`** (así `application-prod.yml` aplica). Para desarrollo con BD local + backend/frontend corriendo fuera de Docker, usa **`SPRING_PROFILES_ACTIVE=dev`**.
 - **Secretos**: Nunca commitees `.env`. Usa `.env.example` como plantilla.
 - **CORS**: En `dev` está fijo a `http://localhost:5173`. En `prod` usa `${SIGER_CORS_ORIGIN}` para permitir orígenes según despliegue.
-- **Migraciones**: Actualmente se usa **SQL script único** `database/siger.sql` (no Flyway/Liquibase activo). Por eso `ddl-auto: none` en prod es correcto para evitar desajustes con el esquema existente.
+- **Esquema y datos**: Se usan `database/siger.sql` para crear la base de datos y el esquema y `database/seed.sql` para los datos iniciales (no Flyway/Liquibase). Por eso `ddl-auto: none` en prod es correcto para evitar desajustes con el esquema existente.
 
 > **Nota sobre `application.properties` vs `.yml`:** El repo usa principalmente `.yml` para perfiles. El `application.yml` base está en YAML; sigue siendo perfectamente válido y legible. Lo importante es entender el **orden de carga** y la **inyección por variables** para pasar fácilmente entre dev local y dockerizado (simulando producción).
 
@@ -344,24 +345,28 @@ spring:
 
 ## Esquema de base de datos
 
-Definido en `database/siger.sql` (origen de verdad único, 12 tablas):
+Definido en `database/siger.sql` (16 tablas: 12 del dominio y 4 de autorización):
 
-| #   | Tabla           | Tipo                            |
-| --- | --------------- | ------------------------------- |
-| 1   | `usuario`       | Base de herencia JOINED         |
-| 2   | `administrador` | Subtipo de `usuario`            |
-| 3   | `organizador`   | Subtipo de `usuario`            |
-| 4   | `participante`  | Subtipo de `usuario`            |
-| 5   | `categoria`     | Catálogo                        |
-| 6   | `evento`        | Entidad principal               |
-| 7   | `sede`          | Catálogo                        |
-| 8   | `sesion`        | Horarios por evento             |
-| 9   | `reserva`       | Inscripción participante-sesión |
-| 10  | `notificacion`  | Mensajes a usuario              |
-| 11  | `auditoria`     | Bitácora de cambios             |
-| 12  | `configuracion` | Params globales                 |
+| #   | Tabla             | Tipo                                    |
+| --- | ----------------- | --------------------------------------- |
+| 1   | `rol`             | Roles de autorización                  |
+| 2   | `permiso`         | Permisos configurables                  |
+| 3   | `rol_permiso`     | Relación entre roles y permisos        |
+| 4   | `jwt_revocado`    | Tokens JWT revocados                   |
+| 5   | `usuario`         | Base de herencia JOINED                |
+| 6   | `administrador`   | Subtipo de `usuario`                   |
+| 7   | `organizador`     | Subtipo de `usuario`                   |
+| 8   | `participante`    | Subtipo de `usuario`                   |
+| 9   | `ubicacion`       | Ubicaciones de eventos                 |
+| 10  | `evento`          | Entidad principal                      |
+| 11  | `reservacion`     | Reservas de participantes              |
+| 12  | `asistencia`      | Asistencia a reservaciones             |
+| 13  | `recurso`         | Recursos disponibles                   |
+| 14  | `evento_recurso`  | Relación entre eventos y recursos      |
+| 15  | `reporte`         | Reportes administrativos               |
+| 16  | `notificacion`    | Mensajes a usuario                     |
 
-Más 1 vista (`vw_resumen_eventos`) y datos semilla (usuarios, categorías, sede demo).
+Más 1 vista (`vw_eventos_disponibles`). Los datos de demostración se encuentran en `database/seed.sql`.
 
 Convenciones:
 
@@ -432,7 +437,7 @@ Base path: `/api`. Autenticación vía `Authorization: Bearer <JWT>` salvo en `/
 
 | Sprint | Objetivo                                                          | Entregable                                                   |
 | ------ | ----------------------------------------------------------------- | ------------------------------------------------------------ |
-| S0     | Setup repo, Docker, CI, esquema DB                                | Este repo + `siger.sql` levantándose con `docker compose up` |
+| S0     | Setup repo, Docker, CI, esquema DB                                | Este repo + esquema y semillas cargados con `docker compose up` |
 | S1     | Auth JWT + login UI + sesión React                                | `/auth/login`, `AuthContext`, rutas protegidas               |
 | S2     | CRUD eventos (organizador) + catálogo público                     | `/eventos`, formulario creación, lista pública               |
 | S3     | Reservas + cupos + WebSockets de notificación                     | `/reservas`, `/ws-notificaciones`, panel "Mis reservas"      |
@@ -654,7 +659,7 @@ Las esenciales:
 ### Flujo de trabajo típico
 
 1. **Abrir el proyecto:** `code siger/` (o _File → Open Folder_ sobre la carpeta `siger`).
-2. **(Solo la primera vez) Cargar la BD:** ejecuta la tarea **"DB: Reset (cargar siger.sql)"** o desde terminal `mysql -u root -p < database/siger.sql`.
+2. **(Solo la primera vez) Cargar la BD:** ejecuta `./scripts/reset-db.sh` o importa, en orden, `database/siger.sql` y `database/seed.sql`.
 3. **(Solo la primera vez) Instalar dependencias del frontend:** tarea **"Frontend: Install (npm install)"**.
 4. **Arrancar el backend:** `F5` (debug con breakpoints) o tarea **"Backend: Run (./mvnw spring-boot:run)"**. La API queda en `http://localhost:8080`.
    > Las tareas usan `./mvnw` (wrapper de Maven incluido en `backend/`); la primera vez descarga Maven 3.9.9 (~10 MB) y lo cachea en `~/.m2/wrapper/`. **No necesitas Maven instalado** en el sistema.

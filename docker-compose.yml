@@ -25,6 +25,7 @@ services:
     volumes:
       - siger_db_data:/var/lib/mysql
       - ./database/siger.sql:/docker-entrypoint-initdb.d/01-siger.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 10s
