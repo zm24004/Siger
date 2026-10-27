@@ -21,19 +21,19 @@ import java.util.function.Supplier;
 
 @Component
 @RequiredArgsConstructor
-public class AdminUserInitializer implements CommandLineRunner {
+public class UserInitializer implements CommandLineRunner {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AdminUserInitializer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(UserInitializer.class);
 
     private static final String ADMIN_EMAIL = "admin@siger.com";
-    private static final String ADMIN_PASSWORD = "admin123";
+    private static final String ADMIN_PASSWORD = "Admin123";
     private static final String ADMIN_NOMBRE = "Administrador";
     private static final String ADMIN_APELLIDO = "General";
     private static final String ORGANIZADOR_EMAIL = "organizador@siger.com";
     private static final String PARTICIPANTE_UNO_EMAIL = "participante1@siger.com";
     private static final String PARTICIPANTE_DOS_EMAIL = "participante2@siger.com";
-    private static final String ORGANIZADOR_PASSWORD = "organizador123";
-    private static final String PARTICIPANTE_PASSWORD = "participante123";
+    private static final String ORGANIZADOR_PASSWORD = "Organizador123";
+    private static final String PARTICIPANTE_PASSWORD = "Participante123";
 
     private final UsuarioRepository usuarioRepository;
     private final AdministradorRepository administradorRepository;

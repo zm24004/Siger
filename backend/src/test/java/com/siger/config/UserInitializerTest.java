@@ -27,7 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class AdminUserInitializerTest {
+class UserInitializerTest {
 
     @Mock UsuarioRepository usuarioRepository;
     @Mock AdministradorRepository administradorRepository;
@@ -36,7 +36,7 @@ class AdminUserInitializerTest {
     @Mock PasswordEncoder passwordEncoder;
 
     private final Map<String, Usuario> usuarios = new HashMap<>();
-    private AdminUserInitializer initializer;
+    private UserInitializer initializer;
 
     @BeforeEach
     void setUp() {
@@ -65,7 +65,7 @@ class AdminUserInitializerTest {
         when(passwordEncoder.encode(anyString()))
             .thenAnswer(invocation -> "encoded:" + invocation.getArgument(0));
 
-        initializer = new AdminUserInitializer(usuarioRepository, administradorRepository,
+        initializer = new UserInitializer(usuarioRepository, administradorRepository,
             organizadorRepository, participanteRepository, passwordEncoder);
     }
 
