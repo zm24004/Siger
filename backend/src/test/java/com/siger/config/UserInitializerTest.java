@@ -70,25 +70,39 @@ class UserInitializerTest {
     }
 
     @Test
-    void creaUnOrganizadorDosParticipantesYNoLosDuplicaAlEjecutarseDeNuevo() {
-        initializer.run();
-        initializer.run();
+    void creaYActualizaElAdministradorYCreaLosUsuariosDemoUnaSolaVez() {
+        initializer.run(new String[0]);
+        initializer.run(new String[0]);
+
+        Usuario administrador = usuarios.get("admin@siger.com");
+        assertThat(administrador).isInstanceOf(Administrador.class);
+        assertThat(administrador.getNombre()).isEqualTo("Administrador");
+        assertThat(administrador.getApellido()).isEqualTo("General");
+        assertThat(administrador.getContrasena()).isEqualTo("encoded:Admin123");
+        assertThat(administrador.getEstado()).isTrue();
 
         Usuario organizador = usuarios.get("organizador@siger.com");
         assertThat(organizador).isInstanceOf(Organizador.class);
         assertThat(organizador.getNombre()).isEqualTo("Organizador");
-        assertThat(organizador.getContrasena()).isEqualTo("encoded:organizador123");
+        assertThat(organizador.getApellido()).isEqualTo("Demo");
+        assertThat(organizador.getTelefono()).isEmpty();
+        assertThat(organizador.getCodigoPais()).isEmpty();
+        assertThat(organizador.getEstado()).isTrue();
+        assertThat(organizador.getContrasena()).isEqualTo("encoded:Organizador123");
 
         Usuario participanteUno = usuarios.get("participante1@siger.com");
         assertThat(participanteUno).isInstanceOf(Participante.class);
+        assertThat(participanteUno.getNombre()).isEqualTo("Participante");
         assertThat(participanteUno.getApellido()).isEqualTo("Uno");
-        assertThat(participanteUno.getContrasena()).isEqualTo("encoded:participante123");
+        assertThat(participanteUno.getContrasena()).isEqualTo("encoded:Participante123");
 
         Usuario participanteDos = usuarios.get("participante2@siger.com");
         assertThat(participanteDos).isInstanceOf(Participante.class);
         assertThat(participanteDos.getApellido()).isEqualTo("Dos");
-        assertThat(participanteDos.getContrasena()).isEqualTo("encoded:participante123");
+        assertThat(participanteDos.getContrasena()).isEqualTo("encoded:Participante123");
 
+        verify(administradorRepository, times(1)).save(any(Administrador.class));
+        verify(usuarioRepository, times(1)).save(any(Usuario.class));
         verify(organizadorRepository, times(1)).save(any(Organizador.class));
         verify(participanteRepository, times(2)).save(any(Participante.class));
     }

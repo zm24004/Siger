@@ -107,8 +107,9 @@ class JwtServiceTest {
     void leer_tokenConFirmaModificada_lanzaJwtException() {
         String token = jwtService.generar("org@test.x", "ORGANIZADOR");
         String[] partes = token.split("\\.");
-        // Alterar el ultimo segmento (la firma)
-        String tokenAlterado = partes[0] + "." + partes[1] + "." + partes[2] + "x";
+        char primerCaracterAlterado = partes[2].charAt(0) == 'A' ? 'B' : 'A';
+        String firmaAlterada = primerCaracterAlterado + partes[2].substring(1);
+        String tokenAlterado = partes[0] + "." + partes[1] + "." + firmaAlterada;
 
         assertThatThrownBy(() -> jwtService.leer(tokenAlterado))
                 .isInstanceOf(JwtException.class);
