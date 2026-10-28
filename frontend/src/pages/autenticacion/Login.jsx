@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { loginPost } from '../api/auth.js'
-import { useAuth } from '../context/AuthContext.jsx'
-import { useToast } from '../components/Toast.jsx'
+import { loginPost } from '../../api/auth.js'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { useToast } from '../../components/Toast.jsx'
 
 const ROL_HOME = {
   PARTICIPANTE: '/mi-panel',

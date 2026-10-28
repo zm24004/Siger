@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getMisReservaciones, pausarReservacion, confirmarReservacion, cancelarReservacion } from '../api/reservaciones.js'
-import { useToast } from '../components/Toast.jsx'
-import Loader from '../components/Loader.jsx'
+import { getMisReservaciones, pausarReservacion, confirmarReservacion, cancelarReservacion } from '../../api/reservaciones.js'
+import { useToast } from '../../components/Toast.jsx'
+import Loader from '../../components/Loader.jsx'
 
 export default function MisReservaciones() {
   const [reservas, setReservas] = useState(null)

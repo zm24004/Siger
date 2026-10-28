@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getCatalogo } from '../api/eventos.js'
-import { useAuth } from '../context/AuthContext.jsx'
-import { useToast } from '../components/Toast.jsx'
-import Loader from '../components/Loader.jsx'
+import { getCatalogo } from '../../api/eventos.js'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { useToast } from '../../components/Toast.jsx'
+import Loader from '../../components/Loader.jsx'
 
 function formatDate(value) {
   if (!value) return '—'

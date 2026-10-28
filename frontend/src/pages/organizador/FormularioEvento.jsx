@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { crearEvento } from '../api/eventos.js'
-import { getUbicaciones } from '../api/ubicaciones.js'
-import { useToast } from '../components/Toast.jsx'
-import Loader from '../components/Loader.jsx'
+import { crearEvento } from '../../api/eventos.js'
+import { getUbicaciones } from '../../api/ubicaciones.js'
+import { useToast } from '../../components/Toast.jsx'
+import Loader from '../../components/Loader.jsx'
 
 const hoyStr = () => new Date().toISOString().slice(0, 10)
 

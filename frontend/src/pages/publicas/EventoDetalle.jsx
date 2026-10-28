@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { getEvento } from '../api/eventos.js'
-import { reservar } from '../api/reservaciones.js'
-import { useAuth } from '../context/AuthContext.jsx'
-import { useToast } from '../components/Toast.jsx'
-import Loader from '../components/Loader.jsx'
-import Modal from '../components/Modal.jsx'
+import { getEvento } from '../../api/eventos.js'
+import { reservar } from '../../api/reservaciones.js'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { useToast } from '../../components/Toast.jsx'
+import Loader from '../../components/Loader.jsx'
+import Modal from '../../components/Modal.jsx'
 
 function formatDate(value) {
   if (!value) return '—'

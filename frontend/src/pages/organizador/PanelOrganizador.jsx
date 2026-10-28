@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getMisEventos, cancelarEvento } from '../api/eventos.js'
-import { useAuth } from '../context/AuthContext.jsx'
-import { useNotificaciones } from '../context/NotificacionContext.jsx'
-import { useToast } from '../components/Toast.jsx'
-import Loader from '../components/Loader.jsx'
-import Modal from '../components/Modal.jsx'
+import { getMisEventos, cancelarEvento } from '../../api/eventos.js'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { useNotificaciones } from '../../context/NotificacionContext.jsx'
+import { useToast } from '../../components/Toast.jsx'
+import Loader from '../../components/Loader.jsx'
+import Modal from '../../components/Modal.jsx'
 
 function formatDate(value) {
   if (!value) return '—'

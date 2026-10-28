@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { recuperarContrasenaPost } from '../api/auth.js'
-import { useToast } from '../components/Toast.jsx'
+import { recuperarContrasenaPost } from '../../api/auth.js'
+import { useToast } from '../../components/Toast.jsx'
 
 function emailValido(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)

@@ -93,7 +93,7 @@ siger/
 │       ├── api/                   # cliente Axios + endpoints
 │       ├── components/            # UI reutilizable (shadcn/ui)
 │       ├── context/              # AuthContext, ToastContext
-│       ├── pages/                # Login, Eventos, MisReservas, Admin, Organizador
+│       ├── pages/                # páginas agrupadas por funcionalidad: publicas, autenticación, participante, organizador, administración, sistema
 │       ├── routes/               # Rutas protegidas
 │       └── lib/                  # utilidades, constantes
 ├── scripts/

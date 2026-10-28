@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { registrarAsistencia } from '../api/asistencias.js'
-import { useToast } from '../components/Toast.jsx'
+import { registrarAsistencia } from '../../api/asistencias.js'
+import { useToast } from '../../components/Toast.jsx'
 
 export default function RegistrarAsistencia() {
   const toast = useToast()

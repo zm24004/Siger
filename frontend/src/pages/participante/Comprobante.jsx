@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { getReservacion } from '../api/reservaciones.js'
-import Loader from '../components/Loader.jsx'
+import { getReservacion } from '../../api/reservaciones.js'
+import Loader from '../../components/Loader.jsx'
 
 export default function Comprobante() {
   const { codigo } = useParams()

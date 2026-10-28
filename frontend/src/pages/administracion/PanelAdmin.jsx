@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { getCatalogo } from "../api/eventos.js";
-import { cambiarEstado, getUsuarios } from "../api/usuarios.js";
-import AdminReservas from "../components/AdminReservas.jsx";
-import Loader from "../components/Loader.jsx";
-import Modal from "../components/Modal.jsx";
-import { useToast } from "../components/Toast.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
-import { useNotificaciones } from "../context/NotificacionContext.jsx";
+import { getCatalogo } from "../../api/eventos.js";
+import { cambiarEstado, getUsuarios } from "../../api/usuarios.js";
+import AdminReservas from "../../components/AdminReservas.jsx";
+import Loader from "../../components/Loader.jsx";
+import Modal from "../../components/Modal.jsx";
+import { useToast } from "../../components/Toast.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useNotificaciones } from "../../context/NotificacionContext.jsx";
 
 /**
  * `estado` llega como Boolean desde el backend (UsuarioResponse.estado: Boolean),

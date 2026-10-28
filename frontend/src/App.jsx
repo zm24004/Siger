@@ -3,20 +3,24 @@ import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
 import RutaProtegida from './components/RutaProtegida.jsx'
 
-import Bienvenida from './pages/Bienvenida.jsx'
-import Login from './pages/Login.jsx'
-import Registro from './pages/Registro.jsx'
-import RecuperarContrasena from './pages/RecuperarContrasena.jsx'
-import Catalogo from './pages/Catalogo.jsx'
-import EventoDetalle from './pages/EventoDetalle.jsx'
-import MisReservaciones from './pages/MisReservaciones.jsx'
-import Comprobante from './pages/Comprobante.jsx'
-import PanelParticipante from './pages/PanelParticipante.jsx'
-import PanelOrganizador from './pages/PanelOrganizador.jsx'
-import FormularioEvento from './pages/FormularioEvento.jsx'
-import RegistrarAsistencia from './pages/RegistrarAsistencia.jsx'
-import PanelAdmin from './pages/PanelAdmin.jsx'
-import NotFound from './pages/NotFound.jsx'
+import Bienvenida from './pages/publicas/Bienvenida.jsx'
+import Catalogo from './pages/publicas/Catalogo.jsx'
+import EventoDetalle from './pages/publicas/EventoDetalle.jsx'
+
+import Login from './pages/autenticacion/Login.jsx'
+import Registro from './pages/autenticacion/Registro.jsx'
+import RecuperarContrasena from './pages/autenticacion/RecuperarContrasena.jsx'
+
+import PanelParticipante from './pages/participante/PanelParticipante.jsx'
+import MisReservaciones from './pages/participante/MisReservaciones.jsx'
+import Comprobante from './pages/participante/Comprobante.jsx'
+
+import PanelOrganizador from './pages/organizador/PanelOrganizador.jsx'
+import FormularioEvento from './pages/organizador/FormularioEvento.jsx'
+import RegistrarAsistencia from './pages/organizador/RegistrarAsistencia.jsx'
+
+import PanelAdmin from './pages/administracion/PanelAdmin.jsx'
+import NotFound from './pages/sistema/NotFound.jsx'
 
 export default function App() {
   return (
