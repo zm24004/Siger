@@ -174,7 +174,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos:
+  /api/v1/eventos:
     get:
       tags: [Eventos]
       summary: Listar catálogo de eventos
@@ -242,7 +242,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos/mis-eventos:
+  /api/v1/eventos/mis-eventos:
     get:
       tags: [Eventos]
       summary: Listar eventos del organizador autenticado
@@ -260,7 +260,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/organizadores/{id}/eventos:
+  /api/v1/organizadores/{id}/eventos:
     get:
       tags: [Eventos]
       summary: Listar eventos de un organizador
@@ -284,7 +284,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos/{id}:
+  /api/v1/eventos/{id}:
     get:
       tags: [Eventos]
       summary: Consultar evento
@@ -330,7 +330,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos/{id}/disponibilidad:
+  /api/v1/eventos/{id}/disponibilidad:
     get:
       tags: [Eventos]
       summary: Consultar cupos disponibles
@@ -347,7 +347,7 @@ paths:
                 $ref: '#/components/schemas/EventoDisponibilidadResponse'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/eventos/{id}/cancelar:
+  /api/v1/eventos/{id}/cancelar:
     patch:
       tags: [Eventos]
       summary: Cancelar evento
@@ -369,7 +369,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos/{id}/reprogramar:
+  /api/v1/eventos/{id}/reprogramar:
     patch:
       tags: [Eventos]
       summary: Reprogramar evento
@@ -399,7 +399,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos/{id}/finalizar:
+  /api/v1/eventos/{id}/finalizar:
     patch:
       tags: [Eventos]
       summary: Finalizar evento
@@ -421,7 +421,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos/{id}/recursos:
+  /api/v1/eventos/{id}/recursos:
     get:
       tags: [Eventos]
       summary: Listar recursos asignados
@@ -472,7 +472,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos/{id}/recursos/{idRecurso}:
+  /api/v1/eventos/{id}/recursos/{idRecurso}:
     put:
       tags: [Eventos]
       summary: Actualizar cantidad del recurso asignado
@@ -808,7 +808,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/reservaciones:
+  /api/v1/reservaciones:
     post:
       tags: [Reservaciones]
       summary: Reservar un cupo
@@ -870,11 +870,11 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/reservaciones/evento/{idEvento}:
+  /api/v1/reservaciones/evento/{idEvento}:
     post:
       tags: [Reservaciones]
       summary: Reservar un evento (ruta compatible)
-      description: Ruta anterior conservada como alias de `POST /api/reservaciones`.
+      description: Ruta anterior conservada como alias de `POST /api/v1/reservaciones`.
       parameters:
         - name: idEvento
           in: path
@@ -897,7 +897,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/reservaciones/mis-reservaciones:
+  /api/v1/reservaciones/mis-reservaciones:
     get:
       tags: [Reservaciones]
       summary: Listar mis reservaciones
@@ -915,7 +915,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/reservaciones/{id}:
+  /api/v1/reservaciones/{id}:
     get:
       tags: [Reservaciones]
       summary: Consultar reservación por ID
@@ -937,7 +937,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/reservaciones/{id}/comprobante:
+  /api/v1/reservaciones/{id}/comprobante:
     get:
       tags: [Reservaciones]
       summary: Descargar comprobante PDF
@@ -963,7 +963,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/reservaciones/{id}/pausar:
+  /api/v1/reservaciones/{id}/pausar:
     patch:
       tags: [Reservaciones]
       summary: Pausar reservación propia
@@ -985,7 +985,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/reservaciones/{id}/confirmar:
+  /api/v1/reservaciones/{id}/confirmar:
     patch:
       tags: [Reservaciones]
       summary: Confirmar reservación propia
@@ -1007,7 +1007,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/reservaciones/{id}/cancelar:
+  /api/v1/reservaciones/{id}/cancelar:
     patch:
       tags: [Reservaciones]
       summary: Cancelar reservación
@@ -1029,7 +1029,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/reservaciones/admin/{id}/cancelar:
+  /api/v1/reservaciones/admin/{id}/cancelar:
     patch:
       tags: [Reservaciones]
       summary: Cancelar reservación como administrador (ruta compatible)
@@ -1051,7 +1051,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos/{idEvento}/reservaciones:
+  /api/v1/eventos/{idEvento}/reservaciones:
     get:
       tags: [Reservaciones]
       summary: Listar reservaciones de un evento
@@ -1078,7 +1078,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/participantes/{idParticipante}/reservaciones:
+  /api/v1/participantes/{idParticipante}/reservaciones:
     get:
       tags: [Reservaciones]
       summary: Consultar historial de un participante
@@ -1105,7 +1105,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/asistencia:
+  /api/v1/asistencia:
     post:
       tags: [Asistencias]
       summary: Registrar asistencia
@@ -1135,11 +1135,11 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/asistencias/registrar:
+  /api/v1/asistencias/registrar:
     post:
       tags: [Asistencias]
       summary: Registrar asistencia (ruta compatible)
-      description: Alias de `POST /api/asistencia`.
+      description: Alias de `POST /api/v1/asistencia`.
       requestBody:
         required: true
         content:
@@ -1163,7 +1163,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/eventos/{idEvento}/asistencia:
+  /api/v1/eventos/{idEvento}/asistencia:
     get:
       tags: [Asistencias]
       summary: Listar asistencia de un evento
@@ -1190,7 +1190,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/eventos/{idEvento}/asistencia/lista:
+  /api/v1/eventos/{idEvento}/asistencia/lista:
     get:
       tags: [Asistencias]
       summary: Consultar lista de asistencia
@@ -1217,7 +1217,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/asistencia/{id}:
+  /api/v1/asistencia/{id}:
     get:
       tags: [Asistencias]
       summary: Consultar asistencia por ID
@@ -1264,7 +1264,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/notificaciones/mis:
+  /api/v1/notificaciones/mis:
     get:
       tags: [Notificaciones]
       summary: Listar mis notificaciones (no leídas primero)
@@ -1280,7 +1280,7 @@ paths:
                   $ref: '#/components/schemas/NotificacionResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /api/notificaciones/{id}:
+  /api/v1/notificaciones/{id}:
     get:
       tags: [Notificaciones]
       summary: Consultar una notificación propia
@@ -1309,7 +1309,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/notificaciones/mis/no-leidas:
+  /api/v1/notificaciones/mis/no-leidas:
     get:
       tags: [Notificaciones]
       summary: Contar mis notificaciones no leídas
@@ -1328,7 +1328,7 @@ paths:
                     example: 3
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /api/notificaciones/{id}/leida:
+  /api/v1/notificaciones/{id}/leida:
     patch:
       tags: [Notificaciones]
       summary: Marcar notificación como leída
@@ -1346,7 +1346,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/notificaciones/{id}/leer:
+  /api/v1/notificaciones/{id}/leer:
     patch:
       tags: [Notificaciones]
       summary: Alias compatible para marcar una notificación como leída
@@ -1363,7 +1363,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/notificaciones/enviar:
+  /api/v1/notificaciones/enviar:
     post:
       tags: [Notificaciones]
       summary: Enviar recordatorio a reservantes de un evento
@@ -1389,7 +1389,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/reportes:
+  /api/v1/reportes:
     get:
       tags: [Reportes]
       summary: Listar reportes accesibles
@@ -1432,7 +1432,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/reportes/{id}:
+  /api/v1/reportes/{id}:
     get:
       tags: [Reportes]
       summary: Consultar un reporte accesible
@@ -1451,7 +1451,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/reportes/{id}/exportar:
+  /api/v1/reportes/{id}/exportar:
     get:
       tags: [Reportes]
       summary: Descargar un reporte en PDF o Excel
@@ -1483,7 +1483,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/estadisticas/participacion:
+  /api/v1/estadisticas/participacion:
     get:
       tags: [Estadísticas]
       summary: Consultar participación por evento
@@ -1506,7 +1506,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/estadisticas/eventos-mas-concurridos:
+  /api/v1/estadisticas/eventos-mas-concurridos:
     get:
       tags: [Estadísticas]
       summary: Obtener ranking de eventos por asistencia registrada
@@ -1537,7 +1537,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/estadisticas/reservaciones:
+  /api/v1/estadisticas/reservaciones:
     get:
       tags: [Estadísticas]
       summary: Consultar reservaciones agrupadas por estado
@@ -1560,7 +1560,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/estadisticas/dashboard:
+  /api/v1/estadisticas/dashboard:
     get:
       tags: [Estadísticas]
       summary: Consultar resumen de panel
