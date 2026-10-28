@@ -26,7 +26,7 @@ import java.util.List;
  */
 @RestController
 @Validated
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 public class EventoController {
 
     private final EventoService eventoService;

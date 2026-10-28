@@ -28,7 +28,7 @@ import java.util.List;
 
 @RestController
 @Validated
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @PreAuthorize("hasAuthority('" + Permisos.EVENTS_MANAGE + "') or hasAuthority('" + Permisos.USERS_READ + "')")
 public class ReporteController {
 
