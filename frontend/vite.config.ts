@@ -13,16 +13,16 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
+      // SockJS info and WebSocket transport for the versioned endpoint.
+      '/api/v1/ws-notificaciones': {
+        changeOrigin: true,
+        target: 'http://localhost:8080',
+        ws: true
+      },
       // Optional proxy to avoid CORS during local development.
       '/api': {
         changeOrigin: true,
         target: 'http://localhost:8080'
-      },
-      // WebSocket/STOMP endpoint proxy (SockJS uses HTTP upgrade)
-      '/ws-notificaciones': {
-        changeOrigin: true,
-        target: 'http://localhost:8080',
-        ws: true
       }
     }
   }

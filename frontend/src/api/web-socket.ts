@@ -14,7 +14,7 @@ const buildWsUrl = (): string => {
   const trimmed = base.replace(/\/api\/?$/, '');
   // SockJS requires an absolute URL. If the base is relative (e.g. '/api'), resolve it against the current origin.
   const wsBase = /^https?:(\/\/)/i.test(trimmed) ? trimmed : `${window.location.origin}${trimmed}`;
-  return `${wsBase}/api/v1/ws-notificaciones`;
+  return `${wsBase}/ws-notificaciones`;
 }
 
 /** Opens a SockJS + STOMP connection to receive user-scoped notifications.
@@ -29,6 +29,8 @@ const conectarNotificaciones = (
   onMensaje: (msg: Notification) => void,
   onConnectChange?: (connected: boolean) => void,
 ) => {
+
+  if(!token) return { desconectar: () => {} };
 
   const wsUrl = buildWsUrl();
 
