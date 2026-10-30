@@ -433,7 +433,7 @@ Base path: `/api`. Autenticación vía `Authorization: Bearer <JWT>` salvo en `/
 
 ### WebSocket (STOMP)
 
-- Endpoint: `/ws-notificaciones` (SockJS)
+- Endpoint: `/api/v1/ws-notificaciones` (SockJS)
 - Topic: `/topic/notificaciones/{userId}` — notificaciones en tiempo real al usuario.
 
 ### Utilidad

@@ -22,7 +22,7 @@ public class TokenRevocationService {
 
     @Transactional
     public void revocar(String token) {
-        Claims claims = jwtService.leer(token);
+        Claims claims = jwtService.validarToken(token);
         String hash = hash(token);
         if (!tokenRevocadoRepository.existsById(hash)) {
             tokenRevocadoRepository.save(new TokenRevocado(hash, claims.getExpiration().toInstant()));

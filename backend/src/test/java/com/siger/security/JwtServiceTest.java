@@ -46,7 +46,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("generar: retorna un token no nulo con estructura JWT (3 partes separadas por '.')")
     void generar_retornaTokenConEstructuraJWT() {
-        String token = jwtService.generar("user@test.x", "PARTICIPANTE");
+        String token = jwtService.generarToken("user@test.x", "PARTICIPANTE");
 
         assertThat(token).isNotNull();
         assertThat(token.split("\\."))
@@ -57,11 +57,11 @@ class JwtServiceTest {
     @Test
     @DisplayName("generar: dos tokens para el mismo usuario decodifican al mismo subject y rol")
     void generar_dosTokensParaMismoUsuario_decodificanAlMismoSubjectYRol() {
-        String t1 = jwtService.generar("user@test.x", "PARTICIPANTE");
-        String t2 = jwtService.generar("user@test.x", "PARTICIPANTE");
+        String t1 = jwtService.generarToken("user@test.x", "PARTICIPANTE");
+        String t2 = jwtService.generarToken("user@test.x", "PARTICIPANTE");
 
-        Claims c1 = jwtService.leer(t1);
-        Claims c2 = jwtService.leer(t2);
+        Claims c1 = jwtService.validarToken(t1);
+        Claims c2 = jwtService.validarToken(t2);
 
         assertThat(c1.getSubject()).isEqualTo("user@test.x");
         assertThat(c2.getSubject()).isEqualTo("user@test.x");
@@ -76,9 +76,9 @@ class JwtServiceTest {
     @Test
     @DisplayName("leer: token recien generado -> subject y rol correctos")
     void leer_tokenRecienGenerado_retornaSubjectYRol() {
-        String token = jwtService.generar("admin@siger.test", "ADMINISTRADOR");
+        String token = jwtService.generarToken("admin@siger.test", "ADMINISTRADOR");
 
-        Claims claims = jwtService.leer(token);
+        Claims claims = jwtService.validarToken(token);
 
         assertThat(claims.getSubject()).as("subject (email)").isEqualTo("admin@siger.test");
         assertThat(claims.get("rol")).as("claim rol").isEqualTo("ADMINISTRADOR");
@@ -94,24 +94,24 @@ class JwtServiceTest {
     @DisplayName("leer: token expirado -> ExpiredJwtException")
     void leer_tokenExpirado_lanzaExpiredJwt() throws InterruptedException {
         JwtService efimero = newServicioConExpiracion(1L);
-        String token = efimero.generar("part@test.x", "PARTICIPANTE");
+        String token = efimero.generarToken("part@test.x", "PARTICIPANTE");
 
         Thread.sleep(50); // dejar que el token (exp 1 ms) caduque
 
-        assertThatThrownBy(() -> jwtService.leer(token))
+        assertThatThrownBy(() -> jwtService.validarToken(token))
                 .isInstanceOf(ExpiredJwtException.class);
     }
 
     @Test
     @DisplayName("leer: token con la firma modificada -> JwtException")
     void leer_tokenConFirmaModificada_lanzaJwtException() {
-        String token = jwtService.generar("org@test.x", "ORGANIZADOR");
+        String token = jwtService.generarToken("org@test.x", "ORGANIZADOR");
         String[] partes = token.split("\\.");
         char primerCaracterAlterado = partes[2].charAt(0) == 'A' ? 'B' : 'A';
         String firmaAlterada = primerCaracterAlterado + partes[2].substring(1);
         String tokenAlterado = partes[0] + "." + partes[1] + "." + firmaAlterada;
 
-        assertThatThrownBy(() -> jwtService.leer(tokenAlterado))
+        assertThatThrownBy(() -> jwtService.validarToken(tokenAlterado))
                 .isInstanceOf(JwtException.class);
     }
 
@@ -122,16 +122,16 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(otro, "secret",
                 "otro-secreto-de-al-menos-32-bytes-distinto-del-original");
         otro.init();
-        String tokenExterno = otro.generar("org@test.x", "ORGANIZADOR");
+        String tokenExterno = otro.generarToken("org@test.x", "ORGANIZADOR");
 
-        assertThatThrownBy(() -> jwtService.leer(tokenExterno))
+        assertThatThrownBy(() -> jwtService.validarToken(tokenExterno))
                 .isInstanceOf(JwtException.class);
     }
 
     @Test
     @DisplayName("leer: cadena que no es un JWT -> JwtException")
     void leer_cadenaNoJwt_lanzaJwtException() {
-        assertThatThrownBy(() -> jwtService.leer("esto-no-es-un-jwt"))
+        assertThatThrownBy(() -> jwtService.validarToken("esto-no-es-un-jwt"))
                 .isInstanceOf(JwtException.class);
     }
 

@@ -12,7 +12,7 @@ servers:
   - url: http://localhost:8080
     description: Servidor local
 x-websocket:
-  endpoint: /ws-notificaciones
+  endpoint: /api/v1/ws-notificaciones
   protocol: STOMP over WebSocket/SockJS
   authentication:
     frame: CONNECT
@@ -24,7 +24,7 @@ x-websocket:
       payload:
         $ref: '#/components/schemas/NotificacionResponse'
   description: |
-    El cliente conecta a /ws-notificaciones, autentica el frame STOMP CONNECT
+    El cliente conecta a /api/v1/ws-notificaciones, autentica el frame STOMP CONNECT
     con el JWT de la API y se suscribe a /user/queue/notificaciones. Las
     notificaciones quedan persistidas y también están disponibles mediante
     los endpoints REST del usuario autenticado.

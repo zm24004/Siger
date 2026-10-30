@@ -41,7 +41,7 @@ class AuthServiceTest {
         when(passwordEncoder.encode("password123")).thenReturn("hash");
         when(participanteRepository.save(any(Participante.class)))
             .thenAnswer(invocation -> invocation.getArgument(0));
-        when(jwtService.generar("ana@example.com", "PARTICIPANTE")).thenReturn("token");
+        when(jwtService.generarToken("ana@example.com", "PARTICIPANTE")).thenReturn("token");
 
         AuthResponse result = authService.registro(registro("PARTICIPANTE"));
 
@@ -57,7 +57,7 @@ class AuthServiceTest {
         when(passwordEncoder.encode("password123")).thenReturn("hash");
         when(organizadorRepository.save(any(Organizador.class)))
             .thenAnswer(invocation -> invocation.getArgument(0));
-        when(jwtService.generar("ana@example.com", "ORGANIZADOR")).thenReturn("token");
+        when(jwtService.generarToken("ana@example.com", "ORGANIZADOR")).thenReturn("token");
 
         AuthResponse result = authService.registro(registro("organizador"));
 

@@ -46,7 +46,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = header.substring(7);
         try {
-            Claims claims = jwtService.leer(token);
+            Claims claims = jwtService.validarToken(token);
             String email = claims.getSubject();
 
             if (tokenRevocationService.estaRevocado(token)) {

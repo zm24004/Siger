@@ -39,10 +39,10 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
 
-        if (accessor.getCommand() != null
-                && StompCommand.CONNECT.equals(accessor.getCommand())) {
+        if (accessor.getCommand() != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
 
             String auth = accessor.getFirstNativeHeader("Authorization");
+
             if (auth == null || !auth.startsWith("Bearer ")) {
                 throw new MessagingException("Falta token de autenticación");
             }
@@ -50,7 +50,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
             String token = auth.substring("Bearer ".length());
             Claims claims;
             try {
-                claims = jwtService.leer(token);
+                claims = jwtService.validarToken(token);
             } catch (JwtException ex) {
                 throw new MessagingException("Token JWT inválido");
             }

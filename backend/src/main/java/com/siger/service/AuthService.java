@@ -42,7 +42,7 @@ public class AuthService {
         }
 
         String rol = RolHelper.derivarRol(usuario);
-        String token = jwtService.generar(usuario.getEmail(), rol);
+        String token = jwtService.generarToken(usuario.getEmail(), rol);
         return new AuthResponse(token, usuario.getNombre(), usuario.getApellido(), rol, usuario.getIdUsuario());
     }
 
@@ -76,7 +76,7 @@ public class AuthService {
             throw new IllegalStateException("Tipo de usuario de registro no soportado.");
         }
         String rolCreado = RolHelper.derivarRol(nuevo);
-        String token = jwtService.generar(nuevo.getEmail(), rolCreado);
+        String token = jwtService.generarToken(nuevo.getEmail(), rolCreado);
         return new AuthResponse(token, nuevo.getNombre(), nuevo.getApellido(), rolCreado, nuevo.getIdUsuario());
     }
 

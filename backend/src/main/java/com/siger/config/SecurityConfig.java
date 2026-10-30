@@ -60,7 +60,7 @@ public class SecurityConfig {
                 // WebSocket / STOMP handshake endpoint — the actual authentication
                 // happens at the STOMP CONNECT frame via JwtChannelInterceptor,
                 // so the HTTP handshake (and SockJS info/XHR) must be public.
-                .requestMatchers("/ws-notificaciones/**").permitAll()
+                .requestMatchers("/api/v1/ws-notificaciones/**").permitAll()
                 // Public read-only access to events catalogue (collection + item + subpaths)
                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                     "/api/eventos", "/api/eventos/**").permitAll()

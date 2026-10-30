@@ -107,6 +107,11 @@ public class EventoController {
         return ResponseEntity.ok(eventoService.finalizar(id, SecurityUtils.requireEmail()));
     }
 
+
+    /**
+     * Endpoints para el manejo de recursos de eventos.
+     */
+
     @GetMapping("/eventos/{id}/recursos")
     @PreAuthorize("hasAuthority('" + Permisos.EVENTS_MANAGE + "')")
     public ResponseEntity<List<EventoRecursoResponse>> listarRecursos(@PathVariable @Positive Long id) {

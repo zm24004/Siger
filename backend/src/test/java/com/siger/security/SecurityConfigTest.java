@@ -94,7 +94,7 @@ class SecurityConfigTest {
     // ------------------------------------------------------------------
 
     private String tokenPara(String email, String rol) {
-        return jwtService.generar(email, rol);
+        return jwtService.generarToken(email, rol);
     }
 
     /** Hace que UserDetailsServiceImpl encuentre al usuario por email. */
