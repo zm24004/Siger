@@ -77,4 +77,7 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
         order by count(r.idReservacion) desc, e.fecha asc
         """)
     Page<Evento> findPopularActiveEvents(Pageable pageable);
+
+
+    Page<Evento> findByEstado(String estado, Pageable pageable);
 }

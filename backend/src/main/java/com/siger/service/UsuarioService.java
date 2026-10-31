@@ -31,23 +31,38 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public UsuarioPageResponse listar(String rol, Boolean estado, int page, int limit) {
-        Specification<Usuario> specification = Specification.where(null);
+        // Inicializamos con una especificación limpia que siempre es verdadera (conjunction)
+        Specification<Usuario> specification = (root, query, builder) -> builder.conjunction();
+        
         if (estado != null) {
-            specification = specification.and((root, query, builder) -> builder.equal(root.get("estado"), estado));
+            specification = specification.and((root, query, builder) -> 
+                builder.equal(root.get("estado"), estado)
+            );
         }
+        
         if (rol != null && !rol.isBlank()) {
             Class<? extends Usuario> tipo = tipoUsuario(rol);
-            specification = specification.and((root, query, builder) -> builder.equal(root.type(), tipo));
+            
+            if (tipo != null) {
+                specification = specification.and((root, query, builder) -> 
+                    builder.equal(root.type(), tipo)
+                );
+            }
         }
 
-        Page<Usuario> usuarios = usuarioRepository.findAll(specification, PageRequest.of(page - 1, limit));
+        // Prevenimos que page-1 sea negativo (Spring Data requiere que el índice empiece en 0)
+        int pageIndex = Math.max(0, page - 1);
+        Page<Usuario> usuarios = usuarioRepository.findAll(specification, PageRequest.of(pageIndex, limit));
+        
         return new UsuarioPageResponse(
             usuarios.getContent().stream().map(this::toResponse).toList(),
             page,
             limit,
             usuarios.getTotalElements(),
-            usuarios.getTotalPages());
+            usuarios.getTotalPages()
+        );
     }
+
 
     @Transactional(readOnly = true)
     public UsuarioResponse detalle(Long id) {

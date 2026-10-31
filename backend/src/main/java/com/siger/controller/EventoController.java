@@ -6,6 +6,7 @@ import com.siger.dto.EventoRecursoRequest;
 import com.siger.dto.EventoRecursoResponse;
 import com.siger.dto.EventoRequest;
 import com.siger.dto.EventoResponse;
+import com.siger.dto.PageResponse;
 import com.siger.dto.ReprogramarEventoRequest;
 import com.siger.security.Permisos;
 import com.siger.service.EventoService;
@@ -105,6 +106,15 @@ public class EventoController {
     @PreAuthorize("hasAuthority('" + Permisos.EVENTS_MANAGE + "')")
     public ResponseEntity<EventoResponse> finalizar(@PathVariable @Positive Long id) {
         return ResponseEntity.ok(eventoService.finalizar(id, SecurityUtils.requireEmail()));
+    }
+
+    @GetMapping ("/eventos/activos")
+    @PreAuthorize("hasAuthority('" + Permisos.EVENTS_MANAGE + "')")
+    public ResponseEntity<PageResponse<EventoResponse>> catalogoActivos(
+        @RequestParam(defaultValue = "1") @Positive Integer page,
+        @RequestParam(defaultValue = "20") @Positive Integer limit
+    ) {
+        return ResponseEntity.ok(eventoService.catalogoActivos(page, limit));
     }
 
     /**

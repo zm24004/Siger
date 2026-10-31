@@ -57,8 +57,15 @@ public class EventoService {
     private final NotificacionStompService notificacionStompService;
 
     @Transactional(readOnly = true)
-    public List<EventoResponse> catalogoActivos() {
-        return catalogo(null, null, null, null);
+    public PageResponse<EventoResponse> catalogoActivos(Integer page, Integer limit) {
+        PageRequest pageable = PageRequest.of(page - 1, limit);
+        Page<Evento> eventosActivos = eventoRepository.findByEstado("Activo", pageable);
+        return new PageResponse<EventoResponse>(
+            eventosActivos.getContent().stream().map(this::toResponse).toList(),
+            page,
+            limit,
+            eventosActivos.getTotalElements(),
+            eventosActivos.getTotalPages());
     }
 
     @Transactional(readOnly = true)
