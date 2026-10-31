@@ -72,7 +72,7 @@ export default function Navbar() {
         </button>
 
         <nav id="nav-menu" className="navbar-menu" aria-label="Navegación principal">
-          <NavLink to="/eventos" className="navbar-link">Eventos</NavLink>
+          <NavLink to="/eventos-publicos" className="navbar-link">Eventos</NavLink>
 
           {isAuthenticated && rol === 'PARTICIPANTE' && (
             <>

@@ -26,13 +26,16 @@ import './styles/global.css';
 import './styles/navbar.css';
 import './styles/panel-additions.css';
 import './styles/panel.css';
+import { CustomNavBar } from './components/navbar/CustomNavBar';
+import { PopularEvents } from './pages/publicas/PopularEvents';
 
 
 
 export default function App() {
   return (
     <div className="app-wrapper">
-      <Navbar />
+      <CustomNavBar/>
+      {/* <Navbar /> */}
       <main className="app-main">
         <Routes>
           {/* Públicas */}
@@ -40,7 +43,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
           <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
-          <Route path="/eventos" element={<Catalogo />} />
+          <Route path="/eventos-publicos" element={<PopularEvents />} />
           <Route path="/evento/:id" element={<EventoDetalle />} />
 
           {/* PARTICIPANTE */}

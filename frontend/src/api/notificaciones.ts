@@ -16,7 +16,8 @@ export class NotificacionService {
 
   /** GET /api/notificaciones/mis/no-leidas (autenticado). */
   async getNoLeidas(): Promise<number> {
-    return this.httpClient.get<number>('/notificaciones/mis/no-leidas');
+    const resp = await this.httpClient.get<{noLeidas: number}>('/notificaciones/mis/no-leidas');
+    return resp.noLeidas
   }
 
   /** PATCH /api/notificaciones/{id}/leer */

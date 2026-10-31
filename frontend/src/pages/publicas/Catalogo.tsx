@@ -1,22 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { eventoService } from '../../api/eventos'
-import { useAuth } from '../../context/AuthContext'
 import { Loader } from '../../components/Loader'
 import { useToast } from '../../context/ToastContext'
 import type { EventoDetalle } from '../../interfaces/api-interface/eventos.interface'
+import { EventSimpleList } from '../../components/ui/EvenSimpleList/EventSimpleList'
 
-function formatDate(value: string) {
-  if (!value) return '—'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return value
-  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 export default function Catalogo() {
-  const { isAuthenticated, rol } = useAuth();
   const toast = useToast();
-  const [eventos, setEventos] = useState<Partial<EventoDetalle>[] | null>([]);
+  const [eventos, setEventos] = useState<EventoDetalle[] | null>([]);
   const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState('');
 
@@ -26,7 +18,7 @@ export default function Catalogo() {
     eventoService.getPublicCatalogo()
       .then((data) => {
         if (!alive) return
-        setEventos(Array.isArray(data) ? data : [])
+        setEventos(data)
       })
       .catch((err) => {
         if (!alive) return
@@ -34,7 +26,7 @@ export default function Catalogo() {
       })
       .finally(() => alive && setCargando(false))
     return () => { alive = false }
-  }, [toast])
+  }, [])
 
   const filtrados = eventos!.filter((e) => {
     const q = filtro.trim().toLowerCase()
@@ -73,36 +65,7 @@ export default function Catalogo() {
           <p>{filtro ? 'Prueba con otros términos de búsqueda.' : 'Vuelve más tarde, los organizadores publicarán eventos pronto.'}</p>
         </div>
       ) : (
-        <ul className="catalogo-grid" aria-label="Listado de eventos">
-          {filtrados.map((ev) => {
-            const cupos = Number(ev.cuposDisponibles ?? 0)
-            const sinCupos = cupos <= 0
-            const cancelado = (ev.estado || '').toUpperCase() === 'CANCELADO'
-            return (
-              <li key={ev.idEvento} className="evento-card">
-                <Link to={`/evento/${ev.idEvento}`} className="evento-card-link" aria-label={`Ver detalle del evento ${ev.nombre}`}>
-                  <div className="evento-card-cuerpo">
-                    <span className={`evento-estado evento-estado-${(ev.estado || 'ACTIVO').toLowerCase()}`}>
-                      {ev.estado || 'ACTIVO'}
-                    </span>
-                    <h3 className="evento-titulo">{ev.nombre}</h3>
-                    <p className="evento-meta"><span>📅</span>{formatDate(ev.fecha!.toString())} · {ev.horaInicio}</p>
-                    <p className="evento-meta"><span>📍</span>{ev.ubicacionNombre || 'Por confirmar'}</p>
-                    <p className="evento-meta"><span>👤</span>Organiza: {ev.organizadorNombre || '—'}</p>
-                  </div>
-                  <div className="evento-acciones">
-                    <span className={`evento-cupos ${sinCupos ? 'agotado' : ''}`} aria-label={`Cupos disponibles: ${cupos}`}>
-                      {sinCupos ? 'Agotado' : `${cupos} cupos`}
-                    </span>
-                    {isAuthenticated && rol === 'PARTICIPANTE' && !cancelado && !sinCupos && (
-                      <span className="btn btn-primary btn-sm" aria-hidden="true">Reservar →</span>
-                    )}
-                  </div>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
+        <EventSimpleList eventList={eventos!}/>
       )}
     </div>
   )

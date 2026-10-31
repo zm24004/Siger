@@ -21,7 +21,7 @@ const NotificacionContext = createContext<NotificacionContextValue | null>(null)
  *      the latest message so consumers (e.g. the Navbar) can toast it.
  *   4. Disconnects cleanly on logout / unmount.
  */
-export const NotificacionProvider = ({ children }: { children: React.ReactNode;}) => {
+export const NotificacionProvider = ({ children }: { children: React.ReactNode; }) => {
   const { usuario } = useAuth();
   const token = usuario?.token || null;
 
@@ -42,11 +42,13 @@ export const NotificacionProvider = ({ children }: { children: React.ReactNode;}
     let cancelled = false;
 
     // Initial unread count from the REST endpoint (best-effort).
-    
+
 
     notificacionService.getNoLeidas()
       .then((count) => {
-        if (!cancelled) setNoLeidas(Number(count) || 0);
+        if (!cancelled) { 
+          setNoLeidas(count);
+        }
       })
       .catch(() => {
         /* silent: the WS will still work, just without an accurate baseline */

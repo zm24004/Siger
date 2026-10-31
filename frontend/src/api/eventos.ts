@@ -11,8 +11,8 @@ export class EventoService {
   }
 
   /** GET /api/eventos -> listado público de eventos. */
-  async getPublicCatalogo(): Promise<Partial<EventoDetalle>[]> {
-    return this.httpClient.get<Partial<EventoDetalle>[]>('/eventos');
+  async getPublicCatalogo(): Promise<EventoDetalle[]> {
+    return this.httpClient.get<EventoDetalle[]>('/eventos');
   }
 
   /** GET /api/eventos/mis-eventos -> listado privado del organizador autenticado. */
@@ -43,6 +43,10 @@ export class EventoService {
     return this.httpClient.get<Paginado<EventoDetalle>>('/eventos');
   }
 
+  async getPopularEvents(): Promise<EventoDetalle[]> {
+    const resp = await this.httpClient.get<Paginado<EventoDetalle>>('/public/eventos-populares' + '?page=1&limit=10');
+    return resp.content;
+  }
 
 }
 
