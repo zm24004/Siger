@@ -44,7 +44,8 @@ public class NotificacionService {
 
     @Transactional(readOnly = true)
     public long contarNoLeidas(Long idUsuario) {
-        return notificacionRepository.countByUsuario_IdUsuarioAndLeidoFalse(idUsuario);
+        var count = notificacionRepository.countByUsuario_IdUsuarioAndLeidoFalse(idUsuario);
+        return count;
     }
 
     @Transactional(readOnly = true)

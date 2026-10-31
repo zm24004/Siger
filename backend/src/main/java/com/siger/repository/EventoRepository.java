@@ -3,6 +3,9 @@ package com.siger.repository;
 import com.siger.model.Evento;
 import com.siger.dto.EstadisticaEventoResponse;
 import jakarta.persistence.LockModeType;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -64,4 +67,14 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Evento e where e.idEvento = :id")
     Optional<Evento> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("""
+        select e from Evento e
+        left join Reservacion r on r.evento.idEvento = e.idEvento and lower(r.estado) <> 'cancelado'
+        left join Ubicacion u on u.idUbicacion = e.ubicacion.idUbicacion
+        where lower(e.estado) = 'activo'
+        group by e
+        order by count(r.idReservacion) desc, e.fecha asc
+        """)
+    Page<Evento> findPopularActiveEvents(Pageable pageable);
 }

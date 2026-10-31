@@ -5,6 +5,7 @@ import com.siger.dto.EventoRecursoRequest;
 import com.siger.dto.EventoRecursoResponse;
 import com.siger.dto.EventoRequest;
 import com.siger.dto.EventoResponse;
+import com.siger.dto.PageResponse;
 import com.siger.dto.ReprogramarEventoRequest;
 import com.siger.exception.BadRequestException;
 import com.siger.exception.BusinessException;
@@ -25,6 +26,9 @@ import com.siger.repository.RecursoRepository;
 import com.siger.repository.ReservacionRepository;
 import com.siger.repository.UbicacionRepository;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,6 +60,20 @@ public class EventoService {
     public List<EventoResponse> catalogoActivos() {
         return catalogo(null, null, null, null);
     }
+
+    @Transactional(readOnly = true)
+    public PageResponse<EventoResponse> eventosPopulares(Integer page, Integer limit) {
+        PageRequest pageable = PageRequest.of(page - 1, limit);
+
+        Page<Evento> eventosPopulares = eventoRepository.findPopularActiveEvents(pageable);
+        return new PageResponse<EventoResponse>(
+            eventosPopulares.getContent().stream().map(this::toResponse).toList(),
+            page,
+            limit,
+            eventosPopulares.getTotalElements(),
+            eventosPopulares.getTotalPages());
+    }
+
 
     @Transactional(readOnly = true)
     public List<EventoResponse> catalogo(

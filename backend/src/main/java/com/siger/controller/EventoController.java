@@ -107,7 +107,6 @@ public class EventoController {
         return ResponseEntity.ok(eventoService.finalizar(id, SecurityUtils.requireEmail()));
     }
 
-
     /**
      * Endpoints para el manejo de recursos de eventos.
      */

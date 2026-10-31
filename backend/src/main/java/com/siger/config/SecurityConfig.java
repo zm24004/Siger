@@ -55,15 +55,13 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/v1/auth/login",
                     "/api/v1/auth/register",
-                    "/api/v1/auth/forgot-password"
+                    "/api/v1/auth/forgot-password",
+                    "/api/v1/public/**"
                 ).permitAll()
                 // WebSocket / STOMP handshake endpoint — the actual authentication
                 // happens at the STOMP CONNECT frame via JwtChannelInterceptor,
                 // so the HTTP handshake (and SockJS info/XHR) must be public.
                 .requestMatchers("/api/v1/ws-notificaciones/**").permitAll()
-                // Public read-only access to events catalogue (collection + item + subpaths)
-                .requestMatchers(org.springframework.http.HttpMethod.GET,
-                    "/api/eventos", "/api/eventos/**").permitAll()
                 // User management is admin-only
                 .requestMatchers("/api/v1/usuarios/**", "/api/v1/roles/**").authenticated()
                 // OpenAPI / Swagger
