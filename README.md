@@ -607,8 +607,16 @@ que recargue la página).
 4. Spring resuelve el destino del usuario → `/user/queue/notificaciones` → el cliente
    recibe el frame, incrementa el contador de no leídas y muestra un _toast_.
 5. Si no hay cliente conectado, el push es _no-op_ (la notificación queda en BD y se ve
-   vía `GET /api/notificaciones/mis`). El push está envuelto en `try/catch` para que un
+   vía `GET /api/notificaciones/mis/pagina`. El historial se pagina con cursor estable
+   (fecha e ID) y tamaño máximo de 50; `GET /api/notificaciones/mis` se conserva por
+   compatibilidad. El contador global se consulta por separado en
+   `GET /api/notificaciones/mis/no-leidas`; en el panel se pueden cargar más resultados
+   sin sustituir los ya mostrados. El push está envuelto en `try/catch` para que un
    fallo de WS **nunca** rompa la reservación.
+   El esquema de instalaciones existentes debe incluir el índice
+   `idx_notificacion_usuario_fecha_id` sobre `(idUsuario, fechaEnvio, idNotificacion)`
+   para mantener eficiente la consulta por cursor; el esquema nuevo ya lo declara en
+   `database/siger.sql`.
 
 ### Archivos
 

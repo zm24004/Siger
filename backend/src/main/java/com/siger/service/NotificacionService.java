@@ -1,7 +1,9 @@
 package com.siger.service;
 
+import com.siger.dto.NotificacionCursor;
 import com.siger.dto.NotificacionEnvioRequest;
 import com.siger.dto.NotificacionEnvioResponse;
+import com.siger.dto.NotificacionPageResponse;
 import com.siger.dto.NotificacionResponse;
 import com.siger.exception.NotFoundException;
 import com.siger.model.Evento;
@@ -13,6 +15,7 @@ import com.siger.repository.NotificacionRepository;
 import com.siger.repository.OrganizadorRepository;
 import com.siger.repository.ReservacionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +43,32 @@ public class NotificacionService {
             .stream()
             .map(this::toResponse)
             .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public NotificacionPageResponse listarPaginaPorUsuario(
+        Long idUsuario,
+        NotificacionCursor cursor,
+        int limit
+    ) {
+        List<Notificacion> resultados = notificacionRepository.buscarPagina(
+            idUsuario,
+            cursor == null ? null : cursor.fechaEnvio(),
+            cursor == null ? null : cursor.idNotificacion(),
+            PageRequest.of(0, limit + 1));
+
+        boolean hasMore = resultados.size() > limit;
+        List<Notificacion> pagina = hasMore
+            ? resultados.subList(0, limit)
+            : resultados;
+        List<NotificacionResponse> content = pagina.stream().map(this::toResponse).toList();
+        NotificacionCursor nextCursor = hasMore && !pagina.isEmpty()
+            ? new NotificacionCursor(
+                pagina.getLast().getFechaEnvio(),
+                pagina.getLast().getIdNotificacion())
+            : null;
+
+        return new NotificacionPageResponse(content, nextCursor, hasMore);
     }
 
     @Transactional(readOnly = true)

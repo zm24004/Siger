@@ -1,5 +1,6 @@
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
+import type { Notificacion } from '../interfaces/api-interface/notificaciones.interface';
 
 /** Builds the SockJS URL below the same versioned API base used by HTTP.
  *  Relative bases resolve against the current origin so Docker traffic stays same-origin.
@@ -24,7 +25,7 @@ const buildWsUrl = (): string => {
  */
 const conectarNotificaciones = (
   token: string,
-  onMensaje: (msg: Notification) => void,
+  onMensaje: (msg: Notificacion) => void,
   onConnectChange?: (connected: boolean) => void,
 ) => {
 
@@ -42,9 +43,9 @@ const conectarNotificaciones = (
       onConnectChange?.(true);
       client.subscribe('/user/queue/notificaciones', (msg) => {
         try {
-          onMensaje(JSON.parse(msg.body) as Notification);
-        } catch {
-          /* ignore malformed frames */
+          onMensaje(JSON.parse(msg.body) as Notificacion);
+        } catch (error) {
+          console.error('No se pudo interpretar una notificación recibida por WebSocket', error);
         }
       });
     },

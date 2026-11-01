@@ -1,4 +1,8 @@
-import type { Notificacion } from '../interfaces/api-interface/notificaciones.interface.js';
+import type {
+  Notificacion,
+  NotificacionCursor,
+  NotificacionPagina,
+} from '../interfaces/api-interface/notificaciones.interface.js';
 import type { IHttpClient } from '../interfaces/api-interface/http-adapter/http-client.interface.js';
 import httpClient from './http-adapter/axios-http-client.adapter.js';
 
@@ -12,6 +16,21 @@ export class NotificacionService {
   /** GET /api/notificaciones/mis (autenticado). */
   async getMis(): Promise<Array<Notificacion>> {
     return this.httpClient.get<Array<Notificacion>>('/notificaciones/mis');
+  }
+
+  /** GET /api/notificaciones/mis/pagina (autenticado, cursor por fecha e ID). */
+  async getPagina(
+    cursor: NotificacionCursor | null = null,
+    limit = 20,
+  ): Promise<NotificacionPagina> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) {
+      params.set('cursorFecha', cursor.fechaEnvio);
+      params.set('cursorId', String(cursor.idNotificacion));
+    }
+    return this.httpClient.get<NotificacionPagina>(
+      `/notificaciones/mis/pagina?${params.toString()}`,
+    );
   }
 
   /** GET /api/notificaciones/mis/no-leidas (autenticado). */

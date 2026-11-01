@@ -1,5 +1,6 @@
 package com.siger.service;
 
+import com.siger.dto.NotificacionCursor;
 import com.siger.dto.NotificacionEnvioRequest;
 import com.siger.exception.NotFoundException;
 import com.siger.model.Evento;
@@ -13,17 +14,22 @@ import com.siger.repository.OrganizadorRepository;
 import com.siger.repository.ReservacionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,6 +44,55 @@ class NotificacionServiceTest {
     @Mock NotificacionStompService notificacionStompService;
 
     @InjectMocks NotificacionService service;
+
+    @Test
+    void listarPaginaPorUsuario_solicitaUnaFilaExtraYConstruyeCursorSiguiente() {
+        LocalDateTime fechaNueva = LocalDateTime.of(2026, 11, 1, 12, 0);
+        LocalDateTime fechaAntigua = fechaNueva.minusMinutes(1);
+        Notificacion primera = crearNotificacion(20L, fechaNueva);
+        Notificacion segunda = crearNotificacion(19L, fechaAntigua);
+
+        when(notificacionRepository.buscarPagina(eq(7L), isNull(), isNull(), any()))
+            .thenReturn(List.of(primera, segunda));
+
+        var response = service.listarPaginaPorUsuario(7L, null, 1);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().getFirst().idNotificacion()).isEqualTo(20L);
+        assertThat(response.hasMore()).isTrue();
+        assertThat(response.nextCursor()).isEqualTo(new NotificacionCursor(fechaNueva, 20L));
+        verify(notificacionRepository)
+            .buscarPagina(eq(7L), isNull(), isNull(), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(2);
+    }
+
+    @Test
+    void listarPaginaPorUsuario_ultimaPaginaNoDevuelveCursor() {
+        Notificacion notificacion = crearNotificacion(
+            20L, LocalDateTime.of(2026, 11, 1, 12, 0));
+        NotificacionCursor cursor = new NotificacionCursor(
+            LocalDateTime.of(2026, 11, 1, 13, 0), 30L);
+        when(notificacionRepository.buscarPagina(
+            eq(7L), eq(cursor.fechaEnvio()), eq(cursor.idNotificacion()), any()))
+            .thenReturn(List.of(notificacion));
+
+        var response = service.listarPaginaPorUsuario(7L, cursor, 2);
+
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.hasMore()).isFalse();
+        assertThat(response.nextCursor()).isNull();
+    }
+
+    private Notificacion crearNotificacion(Long id, LocalDateTime fechaEnvio) {
+        Notificacion notificacion = new Notificacion();
+        notificacion.setIdNotificacion(id);
+        notificacion.setMensaje("Mensaje " + id);
+        notificacion.setTipo("Info");
+        notificacion.setLeido(false);
+        notificacion.setFechaEnvio(fechaEnvio);
+        return notificacion;
+    }
 
     @Test
     void marcarLeida_soloEncuentraNotificacionesDelUsuario() {

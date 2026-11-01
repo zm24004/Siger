@@ -1354,7 +1354,7 @@ paths:
   /api/v1/notificaciones/mis:
     get:
       tags: [Notificaciones]
-      summary: Listar mis notificaciones (no leídas primero)
+      summary: Listar mis notificaciones (compatibilidad; sin paginar)
       description: Compatibilidad de la ruta actual; cada usuario solo consulta su propia bandeja.
       responses:
         '200':
@@ -1365,6 +1365,62 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/NotificacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/notificaciones/mis/pagina:
+    get:
+      tags: [Notificaciones]
+      summary: Listar una página de mis notificaciones
+      description: Cursor estable por fecha de envío e ID, orden descendente. El tamaño predeterminado es 20 y el máximo 50.
+      parameters:
+        - in: query
+          name: cursorFecha
+          schema:
+            type: string
+            format: date-time
+          description: Fecha del cursor devuelto en la página anterior; debe enviarse junto a cursorId.
+        - in: query
+          name: cursorId
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          description: ID del cursor devuelto en la página anterior; debe enviarse junto a cursorFecha.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Página de notificaciones del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [content, nextCursor, hasMore]
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NotificacionResponse'
+                  nextCursor:
+                    type: object
+                    nullable: true
+                    required: [fechaEnvio, idNotificacion]
+                    properties:
+                      fechaEnvio:
+                        type: string
+                        format: date-time
+                      idNotificacion:
+                        type: integer
+                        format: int64
+                  hasMore:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/v1/notificaciones/{id}:

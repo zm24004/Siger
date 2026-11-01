@@ -6,4 +6,14 @@ export interface Notificacion {
     fechaEnvio:     Date;
 }
 
+export interface NotificacionCursor {
+    fechaEnvio: string;
+    idNotificacion: number;
+}
+
+export interface NotificacionPagina {
+    content: Notificacion[];
+    nextCursor: NotificacionCursor | null;
+    hasMore: boolean;
+}
 

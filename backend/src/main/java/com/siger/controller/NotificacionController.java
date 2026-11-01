@@ -1,21 +1,28 @@
 package com.siger.controller;
 
-import com.siger.dto.NotificacionResponse;
+import com.siger.dto.NotificacionCursor;
 import com.siger.dto.NotificacionEnvioRequest;
 import com.siger.dto.NotificacionEnvioResponse;
+import com.siger.dto.NotificacionPageResponse;
+import com.siger.dto.NotificacionResponse;
 import com.siger.exception.NotFoundException;
 import com.siger.model.Usuario;
 import com.siger.repository.UsuarioRepository;
 import com.siger.security.Permisos;
 import com.siger.service.NotificacionService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +48,25 @@ public class NotificacionController {
     @GetMapping("/mis")
     public ResponseEntity<List<NotificacionResponse>> mis() {
         return ResponseEntity.ok(notificacionService.listarPorUsuario(currentIdUsuario()));
+    }
+
+    @GetMapping("/mis/pagina")
+    public ResponseEntity<NotificacionPageResponse> misPagina(
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime cursorFecha,
+        @RequestParam(required = false) @Positive Long cursorId,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit
+    ) {
+        if ((cursorFecha == null) != (cursorId == null)) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "cursorFecha y cursorId deben enviarse juntos.");
+        }
+        NotificacionCursor cursor = cursorFecha == null
+            ? null
+            : new NotificacionCursor(cursorFecha, cursorId);
+        return ResponseEntity.ok(
+            notificacionService.listarPaginaPorUsuario(currentIdUsuario(), cursor, limit));
     }
 
     @GetMapping("/{id}")

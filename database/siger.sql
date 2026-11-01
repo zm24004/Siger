@@ -228,6 +228,8 @@ CREATE INDEX idx_evento_organizador   ON evento(idOrganizador);
 CREATE INDEX idx_reservacion_part    ON reservacion(idParticipante);
 CREATE INDEX idx_reservacion_evento  ON reservacion(idEvento);
 CREATE INDEX idx_reservacion_estado  ON reservacion(estado);
+CREATE INDEX idx_notificacion_usuario_fecha_id
+  ON notificacion(idUsuario, fechaEnvio, idNotificacion);
 CREATE INDEX idx_asistencia_fecha    ON asistencia(fechaAsistencia);
 CREATE INDEX idx_notificacion_usuario ON notificacion(idUsuario);
 CREATE INDEX idx_notificacion_leido  ON notificacion(leido);

@@ -1,14 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { eventoService } from '../../api/eventos';
 import { reservacionService } from '../../api/reservaciones';
-import { notificacionService } from '../../api/notificaciones';
 import { useAuth } from '../../context/AuthContext';
 import { useNotificaciones } from '../../context/NotificacionContext';
 import { Loader } from '../../components/Loader';
 import { useToast } from '../../context/ToastContext';
 import type { EventoDetalle } from '../../interfaces/api-interface/eventos.interface';
-import type { Notificacion } from '../../interfaces/api-interface/notificaciones.interface';
 import type { Reservacion } from '../../interfaces/api-interface/reservacion.interface';
 
 function formatDate(value: string) {
@@ -32,34 +30,40 @@ function formatDateTime(value: string) {
 
 export default function PanelParticipante() {
   const { usuario } = useAuth()
-  const { noLeidas, conectado } = useNotificaciones()
+  const {
+    noLeidas,
+    conectado,
+    notificaciones: notifs,
+    hayMas,
+    cargandoNotificaciones,
+    errorNotificaciones,
+    cargarMas,
+    refrescarNotificaciones,
+    marcarLeida,
+  } = useNotificaciones()
   const toast = useToast()
 
   const [catalogo, setCatalogo] = useState<EventoDetalle[] | null>(null)
   const [reservas, setReservas] = useState<Reservacion[] | null>(null)
-  const [notifs, setNotifs] = useState<Notificacion[] | null>(null)
   const [cargando, setCargando] = useState(true)
 
-  const cargarNotifs = useCallback(() => {
-    notificacionService.getMis()
-      .then((data) => setNotifs(Array.isArray(data) ? data : []))
+  const cargarNotifs = () => {
+    refrescarNotificaciones()
       .catch((err) => toast.error(err.message || 'No se pudieron cargar las notificaciones.'))
-  }, [toast])
+  }
 
   useEffect(() => {
     let alive = true
     setCargando(true)
     Promise.all([
       eventoService.getPublicCatalogo().catch(() => []),
-      reservacionService.getMisReservaciones().catch(() => []),
-      notificacionService.getMis().catch(() => [])
+      reservacionService.getMisReservaciones().catch(() => [])
     ])
-      .then(([cats, res, notis]) => {
+      .then(([cats, res]) => {
         if (!alive) return
         // const eventosContent = (cats as Paginado<EventoDetalle>).content || [];
         setCatalogo(cats as EventoDetalle[] )
         setReservas(Array.isArray(res) ? res : [])
-        setNotifs(Array.isArray(notis) ? notis : [])
       })
       .finally(() => alive && setCargando(false))
     return () => { alive = false }
@@ -70,14 +74,11 @@ export default function PanelParticipante() {
       return est === 'CONFIRMADA' || est === 'PENDIENTE'
     })?.slice(0, 5)
 
-  const notifsRecientes = notifs?.slice(0, 5)
+  const notifsRecientes = notifs
 
   async function handleMarcarLeida(id: number) {
     try {
-      await notificacionService.marcarLeida(id)
-      setNotifs((list) =>
-        list!.map((n) => (n.idNotificacion === id ? { ...n, leido: true } : n))
-      )
+      await marcarLeida(id)
       toast.exito('Notificación marcada como leída.')
     } catch (err: any) {
       toast.error(err.message || 'No se pudo actualizar la notificación.')
@@ -176,17 +177,30 @@ export default function PanelParticipante() {
             type="button"
             className="btn btn-ghost btn-sm"
             onClick={cargarNotifs}
+            disabled={cargandoNotificaciones}
             aria-label="Recargar notificaciones"
           >
-            Refrescar
+            {cargandoNotificaciones ? 'Cargando…' : 'Refrescar'}
           </button>
         </div>
-        {notifsRecientes?.length === 0 ? (
-          <div className="estado-vacio estado-vacio-sm">
-            <h3>Sin notificaciones</h3>
-            <p>Te avisaremos por aquí cuando confirms una reservación o un evento cambie.</p>
+        {errorNotificaciones && (
+          <div className="estado-vacio estado-vacio-sm" role="alert">
+            <p>{errorNotificaciones}</p>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={cargarNotifs}>
+              Reintentar
+            </button>
           </div>
-        ) : (
+        )}
+        {notifsRecientes.length === 0 && !errorNotificaciones ? (
+          cargandoNotificaciones ? (
+            <p className="texto-secundario">Cargando notificaciones…</p>
+          ) : (
+            <div className="estado-vacio estado-vacio-sm">
+              <h3>Sin notificaciones</h3>
+              <p>Te avisaremos por aquí cuando confirms una reservación o un evento cambie.</p>
+            </div>
+          )
+        ) : notifsRecientes.length > 0 ? (
           <ul className="panel-lista">
             {notifsRecientes?.map((n) => {
               const leida = n.leido === true
@@ -216,6 +230,22 @@ export default function PanelParticipante() {
               )
             })}
           </ul>
+        ) : null}
+        {hayMas && (
+          <div className="panel-section-head">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={cargandoNotificaciones}
+              onClick={() => {
+                cargarMas().catch((err) => {
+                  toast.error(err.message || 'No se pudieron cargar más notificaciones.')
+                })
+              }}
+            >
+              {cargandoNotificaciones ? 'Cargando…' : 'Cargar más'}
+            </button>
+          </div>
         )}
       </section>
     </div>
