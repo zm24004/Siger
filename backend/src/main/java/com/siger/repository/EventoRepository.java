@@ -23,19 +23,26 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
 
     Optional<Evento> findByIdEventoAndOrganizador_IdUsuario(Long idEvento, Long idOrganizador);
 
-    @Query("""
+    @Query(value = """
         select e from Evento e
         where (:estado is null or lower(e.estado) = lower(:estado))
           and (:fechaDesde is null or e.fecha >= :fechaDesde)
           and (:fechaHasta is null or e.fecha <= :fechaHasta)
           and (:idUbicacion is null or e.ubicacion.idUbicacion = :idUbicacion)
         order by e.fecha asc, e.horaInicio asc
+        """, countQuery = """
+        select count(e) from Evento e
+        where (:estado is null or lower(e.estado) = lower(:estado))
+          and (:fechaDesde is null or e.fecha >= :fechaDesde)
+          and (:fechaHasta is null or e.fecha <= :fechaHasta)
+          and (:idUbicacion is null or e.ubicacion.idUbicacion = :idUbicacion)
         """)
-    List<Evento> buscarCatalogo(
+    Page<Evento> buscarCatalogo(
         @Param("estado") String estado,
         @Param("fechaDesde") LocalDate fechaDesde,
         @Param("fechaHasta") LocalDate fechaHasta,
-        @Param("idUbicacion") Long idUbicacion);
+        @Param("idUbicacion") Long idUbicacion,
+        Pageable pageable);
 
     boolean existsByUbicacion_IdUbicacion(Long idUbicacion);
 

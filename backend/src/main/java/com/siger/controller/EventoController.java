@@ -10,6 +10,10 @@ import com.siger.dto.PageResponse;
 import com.siger.dto.ReprogramarEventoRequest;
 import com.siger.security.Permisos;
 import com.siger.service.EventoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -37,13 +41,32 @@ public class EventoController {
     }
 
     @GetMapping("/eventos")
-    public ResponseEntity<List<EventoResponse>> catalogo(
+    @Operation(
+        summary = "Consultar catálogo de eventos",
+        description = "Devuelve eventos paginados. Los filtros de fecha, estado y ubicación son opcionales; "
+            + "si se omiten, se incluyen todos los eventos."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Página del catálogo de eventos",
+            useReturnTypeSchema = true),
+        @ApiResponse(responseCode = "400", description = "Filtros o parámetros de paginación inválidos")
+    })
+    public ResponseEntity<PageResponse<EventoResponse>> catalogo(
+        @Parameter(description = "Fecha inicial inclusiva (formato yyyy-MM-dd)", example = "2026-10-31")
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+        @Parameter(description = "Fecha final inclusiva (formato yyyy-MM-dd)", example = "2026-12-31")
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+        @Parameter(description = "Estado del evento (opcional)", example = "Activo")
         @RequestParam(required = false) String estado,
-        @RequestParam(required = false) @Positive Long idUbicacion
+        @Parameter(description = "Filtrar por identificador de ubicación", example = "3")
+        @RequestParam(required = false) @Positive Long idUbicacion,
+        @Parameter(description = "Número de página, comenzando en 1", example = "1")
+        @RequestParam(defaultValue = "1") @Positive Integer page,
+        @Parameter(description = "Cantidad máxima de eventos por página", example = "20")
+        @RequestParam(defaultValue = "20") @Positive Integer limit
     ) {
-        return ResponseEntity.ok(eventoService.catalogo(fechaDesde, fechaHasta, estado, idUbicacion));
+        return ResponseEntity.ok(eventoService.catalogo(
+            fechaDesde, fechaHasta, estado, idUbicacion, page, limit));
     }
 
     @GetMapping("/eventos/{id}")

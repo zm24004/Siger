@@ -83,21 +83,30 @@ public class EventoService {
 
 
     @Transactional(readOnly = true)
-    public List<EventoResponse> catalogo(
+    public PageResponse<EventoResponse> catalogo(
         LocalDate fechaDesde,
         LocalDate fechaHasta,
         String estado,
-        Long idUbicacion
+        Long idUbicacion,
+        Integer page,
+        Integer limit
     ) {
-        String estadoFiltro = estado == null || estado.isBlank() ? "Activo" : estado.trim();
-        LocalDate desdeFiltro = fechaDesde == null && fechaHasta == null ? LocalDate.now() : fechaDesde;
+        String estadoFiltro = estado == null || estado.isBlank() ? null : estado.trim();
         if (fechaDesde != null && fechaHasta != null && fechaHasta.isBefore(fechaDesde)) {
             throw new BadRequestException("La fechaHasta no puede ser anterior a fechaDesde.");
         }
-        return eventoRepository.buscarCatalogo(estadoFiltro, desdeFiltro, fechaHasta, idUbicacion)
-            .stream()
-            .map(this::toResponse)
-            .toList();
+        Page<Evento> eventos = eventoRepository.buscarCatalogo(
+            estadoFiltro,
+            fechaDesde,
+            fechaHasta,
+            idUbicacion,
+            PageRequest.of(page - 1, limit));
+        return new PageResponse<>(
+            eventos.getContent().stream().map(this::toResponse).toList(),
+            page,
+            limit,
+            eventos.getTotalElements(),
+            eventos.getTotalPages());
     }
 
     @Transactional(readOnly = true)

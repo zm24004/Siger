@@ -1,6 +1,9 @@
 package com.siger.service;
 
+import com.siger.dto.EventoResponse;
 import com.siger.dto.EventoRecursoRequest;
+import com.siger.dto.PageResponse;
+import com.siger.exception.BadRequestException;
 import com.siger.exception.BusinessException;
 import com.siger.exception.NotFoundException;
 import com.siger.model.Evento;
@@ -17,6 +20,8 @@ import com.siger.repository.OrganizadorRepository;
 import com.siger.repository.RecursoRepository;
 import com.siger.repository.ReservacionRepository;
 import com.siger.repository.UbicacionRepository;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,6 +36,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,6 +54,63 @@ class EventoServiceTest {
     @Mock NotificacionStompService notificacionStompService;
 
     @InjectMocks EventoService eventoService;
+
+    @Test
+    void catalogo_devuelvePaginaDelRepositorioConFiltrosAplicados() {
+        LocalDate desde = LocalDate.of(2099, 1, 1);
+        LocalDate hasta = LocalDate.of(2099, 12, 31);
+        Evento evento = evento(15L, organizador(7L, "org@example.test"));
+        PageRequest pageable = PageRequest.of(1, 2);
+        when(eventoRepository.buscarCatalogo("Cancelado", desde, hasta, 4L, pageable))
+            .thenReturn(new PageImpl<>(List.of(evento), pageable, 5));
+        when(reservacionRepository.contarActivas(15L)).thenReturn(2L);
+
+        PageResponse<EventoResponse> resultado = eventoService.catalogo(
+            desde, hasta, " Cancelado ", 4L, 2, 2);
+
+        assertThat(resultado.content()).hasSize(1);
+        assertThat(resultado.content().getFirst().idEvento()).isEqualTo(15L);
+        assertThat(resultado.page()).isEqualTo(2);
+        assertThat(resultado.limit()).isEqualTo(2);
+        assertThat(resultado.totalElements()).isEqualTo(5);
+        assertThat(resultado.totalPages()).isEqualTo(3);
+        verify(eventoRepository).buscarCatalogo("Cancelado", desde, hasta, 4L, pageable);
+    }
+
+    @Test
+    void catalogo_sinFiltrosMantieneValoresNulosParaIncluirTodosLosEventos() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(eventoRepository.buscarCatalogo(
+            eq(null), eq(null), eq(null), eq(null), eq(pageable)))
+            .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        PageResponse<EventoResponse> resultado =
+            eventoService.catalogo(null, null, " ", null, 1, 20);
+
+        assertThat(resultado.content()).isEmpty();
+        assertThat(resultado.page()).isEqualTo(1);
+        assertThat(resultado.limit()).isEqualTo(20);
+        assertThat(resultado.totalElements()).isZero();
+        assertThat(resultado.totalPages()).isZero();
+        verify(eventoRepository).buscarCatalogo(
+            eq(null), eq(null), eq(null), eq(null), eq(pageable));
+    }
+
+    @Test
+    void catalogo_rechazaRangoDeFechasInvalidoSinConsultarRepositorio() {
+        assertThatThrownBy(() -> eventoService.catalogo(
+            LocalDate.of(2099, 12, 31),
+            LocalDate.of(2099, 1, 1),
+            null,
+            null,
+            1,
+            20))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessageContaining("fechaHasta");
+
+        verify(eventoRepository, never()).buscarCatalogo(
+            any(), any(), any(), any(), any());
+    }
 
     @Test
     void cancelar_notificaUnaVezCadaParticipanteConReservacionActiva() {

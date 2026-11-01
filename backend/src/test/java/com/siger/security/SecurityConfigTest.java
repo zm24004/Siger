@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -177,10 +178,16 @@ class SecurityConfigTest {
     @Test
     @DisplayName("GET /api/v1/eventos sin token -> 200 (permitAll)")
     void getEventos_sinToken_retorna200() throws Exception {
-        when(eventoService.catalogo(null, null, null, null)).thenReturn(List.of());
+        when(eventoService.catalogo(null, null, null, null, 1, 20))
+            .thenReturn(new PageResponse<>(List.of(), 1, 20, 0, 0));
 
         mockMvc.perform(get("/api/v1/eventos"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.limit").value(20))
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
     }
 
     @Test
