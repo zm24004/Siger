@@ -100,7 +100,6 @@ export const AdministracionUsuarios = () => {
         <h1 id="admin-users-title" className="mt-1 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
           Administración de usuarios
         </h1>
-        <p className="mt-2 text-sm text-gray-600">Consulta las cuentas registradas y administra su acceso al sistema.</p>
       </header>
 
       <div className="mb-5 grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:grid-cols-2">

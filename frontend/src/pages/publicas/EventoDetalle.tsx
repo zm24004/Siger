@@ -95,9 +95,11 @@ export default function EventoDetalle() {
 
   return (
     <article className="evento-detalle">
-      <nav className="breadcrumb" aria-label="Migas de pan">
-        <Link to="/eventos">← Volver al catálogo</Link>
-      </nav>
+      {!(isAuthenticated && rol === 'ADMINISTRADOR') && (
+        <nav className="breadcrumb" aria-label="Migas de pan">
+          <Link to="/eventos">← Volver al catálogo</Link>
+        </nav>
+      )}
 
       <header className="evento-detalle-header">
         <span className={`evento-estado evento-estado-${(evento.estado || 'ACTIVO').toLowerCase()}`}>

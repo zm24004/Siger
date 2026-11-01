@@ -11,7 +11,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Brand from './Brand';
 
@@ -30,8 +30,14 @@ const enlacesPorRol = {
 export default function Sidebar() {
   const { isAuthenticated, rol, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [gestionAbierta, setGestionAbierta] = useState(true);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   useEffect(() => {
     setIsOpen(false);
@@ -191,7 +197,7 @@ export default function Sidebar() {
             type="button"
             className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             aria-label="Cerrar sesión"
-            onClick={logout}
+            onClick={handleLogout}
           >
             <LogOut size={19} aria-hidden="true" />
             <span>Cerrar sesión</span>

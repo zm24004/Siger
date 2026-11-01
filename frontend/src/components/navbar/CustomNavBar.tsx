@@ -2,8 +2,8 @@ import { useState } from "react";
 
 import { useAuth } from "../../context/AuthContext";
 import { useNotificaciones } from "../../context/NotificacionContext";
-import { Bell, LogOut } from 'lucide-react';
-import { Link, NavLink } from "react-router-dom";
+import { Bell, Grid, LogOut } from 'lucide-react';
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import Brand from "../Brand";
 
 const ROL_HOME = {
@@ -18,8 +18,14 @@ export const CustomNavBar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { logout, isAuthenticated, rol } = useAuth();
     const { noLeidas } = useNotificaciones();
+    const navigate = useNavigate();
     const panelPath: string = ROL_HOME[rol?.toUpperCase() as Rol] || '/eventos';
     const mostrarMarca = !isAuthenticated || rol === 'PARTICIPANTE';
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen((prev) => !prev);
@@ -27,7 +33,7 @@ export const CustomNavBar = () => {
 
     return (
         <>
-            <nav className={`relative order-1 flex h-[var(--nav-h)] shrink-0 items-center ${mostrarMarca ? 'justify-between' : 'justify-end'} border-b border-gray-300 bg-white px-6 py-2 transition-all md:sticky md:top-0 md:z-30 md:order-none md:col-start-2 md:row-start-1 md:px-16 lg:px-24 xl:px-32`}>
+            <nav className={`relative order-1 flex h-(--nav-h) shrink-0 items-center ${mostrarMarca ? 'justify-between' : 'justify-end'} border-b border-gray-300 bg-white px-6 py-2 transition-all md:sticky md:top-0 md:z-30 md:order-none md:col-start-2 md:row-start-1 md:px-16 lg:px-24 xl:px-32`}>
                 {mostrarMarca && <Brand />}
 
                 {/* Botón hamburguesa - solo móvil */}
@@ -72,7 +78,8 @@ export const CustomNavBar = () => {
 
 
                 <div className="hidden items-center gap-8 sm:ml-auto sm:flex">
-                    <NavLink to="/eventos-publicos" className={`navbar-link`}>Eventos</NavLink>
+                    <NavLink to="/" className={`navbar-link`}>Inicio</NavLink>
+                    <NavLink to="/eventos-publicos" className={`navbar-link`}>Eventos Populares</NavLink>
 
                     {
                         isAuthenticated && rol === 'PARTICIPANTE' && (
@@ -114,24 +121,28 @@ export const CustomNavBar = () => {
                                     </span>
                                 }
                             </Link>
-                            {rol !== 'ADMINISTRADOR' && rol !== 'ORGANIZADOR' && (
-                                <button className=" flex gap-2 cursor-pointer ml-16 px-8 py-2 hover:bg-(--color-primario-claro) transition text-black rounded-xl"
-                                    onClick={logout}>
-                                    <LogOut className="w-6 h-6 text-(--color-primario-oscuro)" />
-                                </button>
-                            )}
+                            <button
+                                type="button"
+                                className="flex cursor-pointer items-center justify-center rounded-xl p-2 text-black transition hover:bg-(--color-primario-claro)"
+                                onClick={handleLogout}
+                                aria-label="Cerrar sesión"
+                                title="Cerrar sesión"
+                            >
+                                <LogOut className="h-6 w-6 text-(--color-primario-oscuro)" aria-hidden="true" />
+                            </button>
                         </>)
                     }
 
                     {
                         (!isAuthenticated) &&
+
                         <div className="flex gap-2">
-                            <button className="cursor-pointer px-8 py-2 border border-(--color-primario) hover:bg-(--color-primario-claro) transition text-black rounded-xl">
+                            <Link to="/login" className="cursor-pointer px-8 py-2 border border-(--color-primario) hover:bg-(--color-primario-claro) transition text-black rounded-xl">
                                 Iniciar Sesión
-                            </button>
-                            <button className="cursor-pointer px-8 py-2 bg-(--color-primario) hover:bg-(--color-primario-oscuro) transition text-white rounded-xl">
+                            </Link>
+                            <Link to="/registro" className="!text-white cursor-pointer px-8 py-2 bg-(--color-primario) hover:bg-(--color-primario-oscuro) transition rounded-xl">
                                 Registrarse
-                            </button>
+                            </Link>
                         </div>
                     }
                 </div>
