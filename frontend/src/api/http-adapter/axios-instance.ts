@@ -4,7 +4,7 @@ import type { ApiErrorNormalized } from '../../interfaces/api-interface/http-ada
 const baseURL =
   import.meta.env.VITE_API_URL ||
   import.meta.env.VITE_API_BASE_URL ||
-  '/api';
+  '/api/v1';
 
 
 

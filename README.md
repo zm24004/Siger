@@ -86,7 +86,7 @@ siger/
 ├── frontend/ (falta o no implementado todavia * )
 │   ├── Dockerfile *                # Multi-stage: node build -> nginx serve
 │   ├── .dockerignore *
-│   ├── nginx.conf                # SPA fallback + proxy /api
+│   ├── nginx.conf                # SPA fallback + proxy REST/SockJS API v1
 │   ├── package.jso
 │   ├── vite.config.ts
 │   └── src/
@@ -153,7 +153,7 @@ Levanta solo la base de datos:
 docker compose up -d db
 ```
 
-- MySQL quedará en `localhost:${MYSQL_PORT:-3306}`.
+- MySQL quedará en `localhost:${MYSQL_PORT:-3306}`; dentro de Compose, el backend conecta al puerto interno `db:3306`.
 - En el **primer arranque**, Compose ejecuta `database/siger.sql` como `01-siger.sql` y luego `database/seed.sql` como `02-seed.sql`.
 - Usuario de app: `siger_app` con password `MYSQL_PASSWORD`. Si necesitas crearlo manualmente (caso BD externa/local): 
 
@@ -211,11 +211,11 @@ Se crean despues de levantar el backend por primera vez con sus respectivos role
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local   # VITE_API_URL=/api
+cp .env.example .env.local   # VITE_API_URL=http://localhost:8080/api/v1
 npm run dev                   # http://localhost:5173
 ```
 
-`vite.config.ts` proxea `/api` al backend en `http://localhost:8080`, evitando CORS en desarrollo. Puedes abrir `frontend/` en tu editor favorito y correr `npm run dev` desde la terminal integrada.
+`vite.config.ts` proxea `/api` (incluido `/api/v1`) al backend en `http://localhost:8080`, evitando CORS en desarrollo. Puedes abrir `frontend/` en tu editor favorito y correr `npm run dev` desde la terminal integrada.
 
 ---
 
@@ -236,7 +236,7 @@ npm run dev                   # http://localhost:5173
 | `SPRING_PROFILES_ACTIVE` | backend     | Perfil activo                         | `dev` / `prod`                   |
 | `SERVER_PORT`            | backend     | Puerto del backend                    | `8080`                           |
 | `SIGER_CORS_ORIGIN`      | backend     | Orígenes CORS permitidos (prod)       | `http://localhost:5173,http://localhost` |
-| `VITE_API_BASE_URL`      | frontend    | Ruta base de la API (relativa evita CORS) | `/api`                       |
+| `VITE_API_BASE_URL`      | frontend    | Ruta base de la API (relativa evita CORS) | `/api/v1`                       |
 | `VITE_APP_NAME`           | frontend    | Nombre de app (build arg)             | `SIGER`                          |
 | `FRONTEND_PORT`          | compose     | Puerto público del frontend           | `5173`                           |
 | `MYSQL_PORT`             | compose     | Puerto público de MySQL               | `3306`                           |
@@ -284,7 +284,7 @@ SERVER_PORT=8080
 SIGER_CORS_ORIGIN=http://localhost:5173,http://localhost
 
 # Frontend
-VITE_API_BASE_URL=/api
+VITE_API_BASE_URL=/api/v1
 VITE_APP_NAME=SIGER
 FRONTEND_PORT=5173
 ```
@@ -313,7 +313,7 @@ docker compose ps
 ```
 
 ### Notas rápidas
-- **Imagened docker Multi-stage:** Backend Maven→JRE (usuario no-root, healthcheck + `wait-for.sh`). Frontend Node→nginx con `nginx.conf` (SPA fallback + proxy `/api/` y `/ws-notificaciones/` con upgrade WS).
+- **Imágenes Docker multi-stage:** Backend Maven→JRE (usuario no-root, healthcheck + espera de MySQL en el puerto interno 3306). Frontend Node→Nginx con fallback SPA y proxy de `/api/v1/` y `/api/v1/ws-notificaciones` hacia el backend.
 - **Inicialización:** Solo la primera vez del volumen se montan `/docker-entrypoint-initdb.d/01-siger.sql` y `/docker-entrypoint-initdb.d/02-seed.sql`; MySQL los ejecuta en orden alfabético.
 - **Perfiles:** En este modo se usa `prod` (`application-prod.yml` con `ddl-auto: none`, logs INFO, CORS por `SIGER_CORS_ORIGIN`).  
 
@@ -537,7 +537,7 @@ Reiniciar el backend. Si usas Docker, asegúrate de que `MYSQL_PASSWORD` y `DB_P
 ### 3. El frontend no llega al backend (CORS)
 
 **Causa:** Spring no permite el origen de Vite.
-**Solución:** Verificar `CorsConfig` permite `http://localhost:5173` en perfil dev. El `nginx.conf` del frontend también hace proxy de `/api` a `backend:8080`, evitando CORS en producción.
+**Solución:** En desarrollo local, verificar `CorsConfig` permite `http://localhost:5173`. En Docker, el navegador consume `/api/v1` en el mismo origen y Nginx lo proxea a `backend:8080`, evitando CORS.
 
 ### 4. `Public Key Retrieval is not allowed`
 
@@ -575,7 +575,7 @@ Matar el proceso o cambiar el mapeo en `docker-compose.yml` (p. ej. `8081:8080`)
 ### 8. WebSockets no conectan
 
 **Causa:** Proxy/nginx corta upgrade de protocolo.
-**Solución:** En nginx.conf del frontend, asegurarse de que `proxy_set_header Upgrade $http_upgrade;` y `Connection "upgrade";` están presentes para `/ws-notificaciones`. En dev local, Vite proxy debe tener `ws: true`.
+**Solución:** El endpoint es `/api/v1/ws-notificaciones`; Nginx debe conservar ese prefijo y configurar los encabezados de upgrade. En desarrollo local, el proxy Vite debe tener `ws: true`.
 
 ### 9. `JWT signature does not match`
 

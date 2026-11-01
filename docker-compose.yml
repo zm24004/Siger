@@ -53,6 +53,7 @@ services:
     env_file:
       - .env
     environment:
+      DB_HOST: db
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       SPRING_DATASOURCE_URL: ${DB_URL:-jdbc:mysql://db:3306/siger?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-siger_app}
@@ -67,14 +68,15 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
         VITE_APP_NAME: ${VITE_APP_NAME:-SIGER}
     container_name: siger-frontend
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-5173}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - siger-net
 

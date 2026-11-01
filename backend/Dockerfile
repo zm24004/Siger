@@ -41,4 +41,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=5 \
   CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 # Arranque con espera a DB
-ENTRYPOINT sh -c '/app/wait-for.sh ${DB_HOST:-db}:${MYSQL_PORT:-3306} -- java -jar /app/app.jar'
+ENTRYPOINT sh -c '/app/wait-for.sh ${DB_HOST:-db}:3306 -- java -jar /app/app.jar'
