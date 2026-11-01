@@ -78,7 +78,8 @@ public class UsuarioService {
 
     @Transactional
     public UsuarioResponse crear(UsuarioCreateRequest request) {
-        if (usuarioRepository.existsByEmail(request.email())) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (usuarioRepository.existsByEmail(email)) {
             throw new BusinessException("Ya existe una cuenta con ese email.");
         }
 
@@ -90,7 +91,7 @@ public class UsuarioService {
         };
         nuevo.setNombre(request.nombre().trim());
         nuevo.setApellido(request.apellido().trim());
-        nuevo.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
+        nuevo.setEmail(email);
         nuevo.setTelefono(request.telefono().trim());
         nuevo.setCodigoPais(request.codigoPais().trim());
         nuevo.setContrasena(passwordEncoder.encode(request.contrasena()));

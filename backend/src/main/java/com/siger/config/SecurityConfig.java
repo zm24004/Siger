@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -62,6 +63,8 @@ public class SecurityConfig {
                 // happens at the STOMP CONNECT frame via JwtChannelInterceptor,
                 // so the HTTP handshake (and SockJS info/XHR) must be public.
                 .requestMatchers("/api/v1/ws-notificaciones/**").permitAll()
+                // Public event catalogue and event details.
+                .requestMatchers(HttpMethod.GET, "/api/v1/eventos", "/api/v1/eventos/{id}").permitAll()
                 // User management is admin-only
                 .requestMatchers("/api/v1/usuarios/**", "/api/v1/roles/**").authenticated()
                 // OpenAPI / Swagger

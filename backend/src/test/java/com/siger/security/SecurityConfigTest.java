@@ -59,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>El secreto JWT y el origen CORS provienen de
  * {@code application-test.properties} (perfil "test"); no se usa base de datos.
  *
- * <p>Cubre: rutas publicas (GET /api/eventos, GET /api/eventos/{id}), rutas
+ * <p>Cubre: rutas publicas (GET /api/v1/eventos, GET /api/v1/eventos/{id}), rutas
  * protegidas sin token (401), token invalido (401), control de roles con
  * {@code @PreAuthorize} (PARTICIPANTE 403, ORGANIZADOR 200, ADMINISTRADOR 200)
  * y validacion de Bean Validation (400) tras pasar la autorizacion.
@@ -152,7 +152,7 @@ class SecurityConfigTest {
                 1L, "Auditorio", 1L, "Org", 50);
     }
 
-    /** Body de POST /api/eventos valido (pasa @Valid). */
+    /** Body de POST /api/v1/eventos valido (pasa @Valid). */
     private static final String BODY_VALIDO = """
             {
               "nombre": "Evento test",
@@ -165,7 +165,7 @@ class SecurityConfigTest {
             }
             """;
 
-    /** Body de POST /api/eventos invalido (violaciones de @NotBlank/@NotNull/@Positive). */
+    /** Body de POST /api/v1/eventos invalido (violaciones de @NotBlank/@NotNull/@Positive). */
     private static final String BODY_INVALIDO = """
             {"descripcion":"sin nombre","capacidadMaxima":0,"idUbicacion":1}
             """;
@@ -175,20 +175,20 @@ class SecurityConfigTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("GET /api/eventos sin token -> 200 (permitAll)")
+    @DisplayName("GET /api/v1/eventos sin token -> 200 (permitAll)")
     void getEventos_sinToken_retorna200() throws Exception {
         when(eventoService.catalogo(null, null, null, null)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/eventos"))
+        mockMvc.perform(get("/api/v1/eventos"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("GET /api/eventos/{id} sin token -> 200 (permitAll)")
+    @DisplayName("GET /api/v1/eventos/{id} sin token -> 200 (permitAll)")
     void getEventoPorId_sinToken_retorna200() throws Exception {
         when(eventoService.detalle(1L)).thenReturn(eventoResponse());
 
-        mockMvc.perform(get("/api/eventos/1"))
+        mockMvc.perform(get("/api/v1/eventos/1"))
                 .andExpect(status().isOk());
     }
 
@@ -197,9 +197,9 @@ class SecurityConfigTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("POST /api/eventos sin token -> 401 (AuthEntryPointJwt)")
+    @DisplayName("POST /api/v1/eventos sin token -> 401 (AuthEntryPointJwt)")
     void postEventos_sinToken_retorna401() throws Exception {
-        mockMvc.perform(post("/api/eventos")
+        mockMvc.perform(post("/api/v1/eventos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(BODY_VALIDO))
                 .andExpect(status().isUnauthorized());
@@ -226,9 +226,9 @@ class SecurityConfigTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("POST /api/eventos con token invalido -> 401")
+    @DisplayName("POST /api/v1/eventos con token invalido -> 401")
     void postEventos_conTokenInvalido_retorna401() throws Exception {
-        mockMvc.perform(post("/api/eventos")
+        mockMvc.perform(post("/api/v1/eventos")
                         .header("Authorization", "Bearer cadena-que-no-es-un-jwt")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(BODY_VALIDO))
@@ -272,11 +272,11 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("POST /api/eventos con token PARTICIPANTE -> 403 (requiere ORGANIZADOR)")
+    @DisplayName("POST /api/v1/eventos con token PARTICIPANTE -> 403 (requiere ORGANIZADOR)")
     void postEventos_conParticipante_retorna403() throws Exception {
         usuarioExiste("part@test.x", "PARTICIPANTE");
 
-        mockMvc.perform(post("/api/eventos")
+        mockMvc.perform(post("/api/v1/eventos")
                         .header("Authorization", "Bearer " + tokenPara("part@test.x", "PARTICIPANTE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(BODY_VALIDO))
@@ -284,13 +284,13 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("POST /api/eventos con token ORGANIZADOR y body valido -> 201")
+    @DisplayName("POST /api/v1/eventos con token ORGANIZADOR y body valido -> 201")
     void postEventos_conOrganizadorBodyValido_retorna201() throws Exception {
         usuarioExiste("org@test.x", "ORGANIZADOR");
         when(eventoService.crear(any(EventoRequest.class), anyString()))
                 .thenReturn(eventoResponse());
 
-        mockMvc.perform(post("/api/eventos")
+        mockMvc.perform(post("/api/v1/eventos")
                         .header("Authorization", "Bearer " + tokenPara("org@test.x", "ORGANIZADOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(BODY_VALIDO))
@@ -298,11 +298,11 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("POST /api/eventos con token ORGANIZADOR y body invalido -> 400 (validacion)")
+    @DisplayName("POST /api/v1/eventos con token ORGANIZADOR y body invalido -> 400 (validacion)")
     void postEventos_conOrganizadorBodyInvalido_retorna400() throws Exception {
         usuarioExiste("org@test.x", "ORGANIZADOR");
 
-        mockMvc.perform(post("/api/eventos")
+        mockMvc.perform(post("/api/v1/eventos")
                         .header("Authorization", "Bearer " + tokenPara("org@test.x", "ORGANIZADOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(BODY_INVALIDO))
@@ -400,12 +400,12 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("GET /api/eventos/mis-eventos con token ORGANIZADOR -> 200")
+    @DisplayName("GET /api/v1/eventos/mis-eventos con token ORGANIZADOR -> 200")
     void getMisEventos_conOrganizador_retorna200() throws Exception {
         usuarioExiste("org@test.x", "ORGANIZADOR");
         when(eventoService.misEventos(anyString())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/eventos/mis-eventos")
+        mockMvc.perform(get("/api/v1/eventos/mis-eventos")
                         .header("Authorization", "Bearer " + tokenPara("org@test.x", "ORGANIZADOR")))
                 .andExpect(status().isOk());
     }
