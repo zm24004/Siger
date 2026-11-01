@@ -38,7 +38,7 @@ export class EventoService {
     return Boolean(resp);
   }
 
-    /** GET /api/eventos -> listado de eventos paginado para Admin. */
+  /** GET /api/eventos -> listado de eventos paginado para Admin. */
   async getEventosPaginado(): Promise<Paginado<EventoDetalle>> {
     return this.httpClient.get<Paginado<EventoDetalle>>('/eventos');
   }
@@ -46,6 +46,11 @@ export class EventoService {
   async getPopularEvents(): Promise<EventoDetalle[]> {
     const resp = await this.httpClient.get<Paginado<EventoDetalle>>('/public/eventos-populares' + '?page=1&limit=10');
     return resp.content;
+  }
+
+  async countEventosActivosPaginado(): Promise<number> {
+    const resp =  await this.httpClient.get<Paginado<EventoDetalle>>('/eventos/activos?page=1&limit=1');
+    return resp.totalElements;
   }
 
 }

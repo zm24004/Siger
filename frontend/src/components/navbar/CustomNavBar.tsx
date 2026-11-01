@@ -1,10 +1,10 @@
 import { useState } from "react";
 
-import imageLogo from '../../assets/favicon.svg';
 import { useAuth } from "../../context/AuthContext";
 import { useNotificaciones } from "../../context/NotificacionContext";
 import { Bell, LogOut } from 'lucide-react';
 import { Link, NavLink } from "react-router-dom";
+import Brand from "../Brand";
 
 const ROL_HOME = {
     PARTICIPANTE: '/mi-panel',
@@ -19,6 +19,7 @@ export const CustomNavBar = () => {
     const { logout, isAuthenticated, rol } = useAuth();
     const { noLeidas } = useNotificaciones();
     const panelPath: string = ROL_HOME[rol?.toUpperCase() as Rol] || '/eventos';
+    const mostrarMarca = !isAuthenticated || rol === 'PARTICIPANTE';
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen((prev) => !prev);
@@ -26,15 +27,8 @@ export const CustomNavBar = () => {
 
     return (
         <>
-            <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-2 border-b border-gray-300 bg-white relative transition-all">
-                <div className="flex items-center gap-2">
-                    <img
-                        className="h-9 w-9"
-                        src={imageLogo}
-                        alt="dummyLogoColored"
-                    />
-                    <span className="text-xl font-bold text-(--color-primario-oscuro)">SIGER</span>
-                </div>
+            <nav className={`relative order-1 flex h-[var(--nav-h)] shrink-0 items-center ${mostrarMarca ? 'justify-between' : 'justify-end'} border-b border-gray-300 bg-white px-6 py-2 transition-all md:sticky md:top-0 md:z-30 md:order-none md:col-start-2 md:row-start-1 md:px-16 lg:px-24 xl:px-32`}>
+                {mostrarMarca && <Brand />}
 
                 {/* Botón hamburguesa - solo móvil */}
                 <button
@@ -77,7 +71,7 @@ export const CustomNavBar = () => {
                 </div>
 
 
-                <div className="hidden sm:flex items-center gap-8">
+                <div className="hidden items-center gap-8 sm:ml-auto sm:flex">
                     <NavLink to="/eventos-publicos" className={`navbar-link`}>Eventos</NavLink>
 
                     {
@@ -107,7 +101,7 @@ export const CustomNavBar = () => {
 
 
                     {
-                        (isAuthenticated) &&
+                        isAuthenticated &&
                         (<>
                             <Link to={panelPath} className="py-4 px-1 relative border-2 border-transparent text-gray-800 rounded-full hover:text-gray-400 focus:outline-none focus:text-gray-500 transition duration-150 ease-in-out" aria-label="Cart">
                                 <Bell className="text-(--color-primario-oscuro)" />
@@ -120,10 +114,12 @@ export const CustomNavBar = () => {
                                     </span>
                                 }
                             </Link>
-                            <button className=" flex gap-2 cursor-pointer ml-16 px-8 py-2 hover:bg-(--color-primario-claro) transition text-black rounded-xl"
-                                onClick={logout}>
-                                <LogOut className="w-6 h-6 text-(--color-primario-oscuro)" />
-                            </button>
+                            {rol !== 'ADMINISTRADOR' && rol !== 'ORGANIZADOR' && (
+                                <button className=" flex gap-2 cursor-pointer ml-16 px-8 py-2 hover:bg-(--color-primario-claro) transition text-black rounded-xl"
+                                    onClick={logout}>
+                                    <LogOut className="w-6 h-6 text-(--color-primario-oscuro)" />
+                                </button>
+                            )}
                         </>)
                     }
 

@@ -16,3 +16,12 @@ export interface Usuario {
   rol:           string;
   fechaRegistro: Date;
 }
+
+
+export type USER_FILER_TYPE = 'ADM' | 'PAR' | 'ORG' | null | undefined
+export interface UsuarioPaginadoParams{
+  page: number;
+  limit: number;
+  estado?: boolean | null | undefined;
+  rol: USER_FILER_TYPE
+}

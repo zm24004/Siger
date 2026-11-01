@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import type { EventoDetalle } from "../../../interfaces/api-interface/eventos.interface";
-import * as dateUtils from '../../../util/date-utils';
+import * as dateUtils from '../../../utils/date-utils';
 
 interface EventSimpleListProps {
     eventList: EventoDetalle[]
