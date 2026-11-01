@@ -1,10 +1,9 @@
-import { useState } from "react";
-
 import { useAuth } from "../../context/AuthContext";
 import { useNotificaciones } from "../../context/NotificacionContext";
-import { Bell, Grid, LogOut } from 'lucide-react';
+import { Bell, LogOut } from 'lucide-react';
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import Brand from "../Brand";
+import { MobileNavMenu } from "./MobileNavMenu";
 
 const ROL_HOME = {
     PARTICIPANTE: '/mi-panel',
@@ -15,7 +14,6 @@ type Rol = keyof typeof ROL_HOME; // "PARTICIPANTE" | "ORGANIZADOR" | "ADMINISTR
 
 export const CustomNavBar = () => {
 
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { logout, isAuthenticated, rol } = useAuth();
     const { noLeidas } = useNotificaciones();
     const navigate = useNavigate();
@@ -27,55 +25,18 @@ export const CustomNavBar = () => {
         navigate('/');
     };
 
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen((prev) => !prev);
-    };
-
     return (
         <>
             <nav className={`relative order-1 flex h-(--nav-h) shrink-0 items-center ${mostrarMarca ? 'justify-between' : 'justify-end'} border-b border-gray-300 bg-white px-6 py-2 transition-all md:sticky md:top-0 md:z-30 md:order-none md:col-start-2 md:row-start-1 md:px-16 lg:px-24 xl:px-32`}>
                 {mostrarMarca && <Brand />}
 
-                {/* Botón hamburguesa - solo móvil */}
-                <button
-                    aria-label="Menu"
-                    id="menu-toggle"
-                    className="sm:hidden"
-                    onClick={toggleMobileMenu}
-                >
-                    <svg
-                        width="21"
-                        height="15"
-                        viewBox="0 0 21 15"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <rect width="21" height="1.5" rx=".75" fill="#426287" />
-                        <rect x="8" y="6" width="13" height="1.5" rx=".75" fill="#426287" />
-                        <rect x="6" y="13" width="15" height="1.5" rx=".75" fill="#426287" />
-                    </svg>
-                </button>
-
-                {/* Menú móvil */}
-                <div
-                    id="mobile-menu"
-                    className={`${isMobileMenuOpen ? 'flex' : 'hidden'
-                        } absolute top-15 left-0 w-full bg-white shadow-md py-4 flex-col items-start gap-2 px-5 text-sm md:hidden z-50`}
-                >
-                    <a href="#" className="block">
-                        Home
-                    </a>
-                    <a href="#" className="block">
-                        About
-                    </a>
-                    <a href="#" className="block">
-                        Contact
-                    </a>
-                    <button className="cursor-pointer px-6 py-2 mt-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full text-sm">
-                        Login
-                    </button>
-                </div>
-
+                <MobileNavMenu
+                    isAuthenticated={isAuthenticated}
+                    rol={rol}
+                    panelPath={panelPath}
+                    noLeidas={noLeidas}
+                    onLogout={handleLogout}
+                />
 
                 <div className="hidden items-center gap-8 sm:ml-auto sm:flex">
                     <NavLink to="/" className={`navbar-link`}>Inicio</NavLink>
