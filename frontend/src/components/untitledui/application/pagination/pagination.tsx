@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronLeftDouble, ChevronRight, ChevronRightDouble } from "@untitledui/icons";
-import { ButtonGroup, ButtonGroupItem } from "@/components/untitledui/base/button-group/button-group";
-import { Button } from "@/components/untitledui/base/buttons/button";
-import { InputBase } from "@/components/untitledui/base/input/input";
+import { ButtonGroup, ButtonGroupItem } from "../../../../components/untitledui/base/button-group/button-group";
+import { Button } from "../../../../components/untitledui/base/buttons/button";
+import { InputBase } from "../../../../components/untitledui/base/input/input";
 import { Select } from "@/components/untitledui/base/select/select";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { cx } from "@/utils/cx";

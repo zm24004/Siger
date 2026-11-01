@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { SwitchProps as AriaSwitchProps } from "react-aria-components";
 import { Switch as AriaSwitch } from "react-aria-components";
-import { cx } from "@/utils/cx";
+import { cx } from "../../../../utils/cx";
 
 interface ToggleBaseProps {
     /** Controls the track and knob dimensions, and how far the knob slides when selected. */

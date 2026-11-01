@@ -10,7 +10,6 @@ import { useToast } from '../../context/ToastContext';
 import type { EventoDetalle } from '../../interfaces/api-interface/eventos.interface';
 import type { Notificacion } from '../../interfaces/api-interface/notificaciones.interface';
 import type { Reservacion } from '../../interfaces/api-interface/reservacion.interface';
-import type { Paginado } from '../../interfaces/common';
 
 function formatDate(value: string) {
   if (!value) return '—'
