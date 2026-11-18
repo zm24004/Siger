@@ -74,6 +74,7 @@
 .panel-stats .stat-card-exito { border-left-color: var(--color-exito); }
 .panel-stats .stat-card-peligro { border-left-color: var(--color-error); }
 .panel-stats .stat-card-rol { border-left-color: var(--color-advertencia); }
+.panel-stats .stat-card-purple { border-left-color: oklch(49.1% 0.27 292.581); }
 
 .panel-stats .stat-label {
   font-size: 0.75rem;
@@ -92,6 +93,7 @@
 .panel-stats .stat-card-exito .stat-valor { color: var(--color-exito); }
 .panel-stats .stat-card-peligro .stat-valor { color: var(--color-error); }
 .panel-stats .stat-card-rol .stat-valor { color: var(--color-advertencia); }
+.panel-stats .stat-card-purple .stat-valor { color: oklch(49.1% 0.27 292.581); }
 
 .stat-sub {
   font-size: 0.75rem;
@@ -101,7 +103,7 @@
 .stat-link {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-primario);
+  color: oklch(49.1% 0.27 292.581);
   margin-top: 0.15rem;
 }
 

@@ -1,0 +1,34 @@
+# --- Directorios de compilación y salida de Java ---
+**/target/
+**/build/
+graphify-out/
+.graphifyignore
+
+# --- IntelliJ IDEA ---
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# --- Visual Studio Code ---
+.vscode/
+.history/
+*.code-workspace
+
+# --- Archivos de Base de Datos y Logs locales ---
+**/logs/
+*.log
+*.db
+*.sqlite
+
+# --- Configuraciones del Entorno (Evitar fugas de credenciales/Tokens) ---
+**/config/application-dev-*.yml
+**/config/application-dev-*.properties
+.env
+.env.*
+
+# --- Reportes y Testing ---
+test-results/
+**/reports/
+**/screenshots/

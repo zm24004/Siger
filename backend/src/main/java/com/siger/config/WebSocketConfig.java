@@ -9,7 +9,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 /**
  * Spring WebSocket + STOMP configuration.
  *
- * <p>The handshake endpoint is {@code /ws-notificaciones} (public HTTP upgrade).
+ * <p>The handshake endpoint is {@code /api/v1/ws-notificaciones} (public HTTP upgrade).
  * Authentication is performed at the STOMP {@code CONNECT} frame by
  * {@link com.siger.security.JwtChannelInterceptor}, which sets the user
  * principal (email) so messages can be routed with
@@ -37,8 +37,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // SockJS-capable endpoint. SockJS connects over HTTP (it handles the
-        // upgrade negotiation), so the URL the client uses is http://.../ws-notificaciones.
-        registry.addEndpoint("/ws-notificaciones")
+        // upgrade negotiation), so the URL the client uses is http://.../api/v1/ws-notificaciones.
+        registry.addEndpoint("/api/v1/ws-notificaciones")
             .setAllowedOriginPatterns("*")
             .withSockJS();
     }

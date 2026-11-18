@@ -38,3 +38,5 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
+    url: /openapi.yml
+    disableSwaggerDefaultUrl: true

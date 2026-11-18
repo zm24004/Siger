@@ -4,7 +4,10 @@ import com.siger.model.Administrador;
 import com.siger.model.Organizador;
 import com.siger.model.Participante;
 import com.siger.model.Usuario;
+import com.siger.model.Rol;
 import com.siger.repository.UsuarioRepository;
+import com.siger.repository.RolRepository;
+import com.siger.service.RolHelper;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,7 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Loads a Usuario by email and builds a Spring Security UserDetails with
@@ -23,13 +26,16 @@ import java.util.List;
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UsuarioRepository usuarioRepository;
+    private final RolRepository rolRepository;
 
-    public UserDetailsServiceImpl(UsuarioRepository usuarioRepository) {
+    public UserDetailsServiceImpl(UsuarioRepository usuarioRepository, RolRepository rolRepository) {
         this.usuarioRepository = usuarioRepository;
+        this.rolRepository = rolRepository;
     }
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        
         Usuario u = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + email));
 
@@ -37,18 +43,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("Usuario inactivo: " + email);
         }
 
-        String rol;
-        if (u instanceof Administrador) {
-            rol = "ADMINISTRADOR";
-        } else if (u instanceof Organizador) {
-            rol = "ORGANIZADOR";
-        } else if (u instanceof Participante) {
-            rol = "PARTICIPANTE";
-        } else {
-            throw new IllegalStateException("Tipo de usuario no soportado: " + u.getClass().getName());
-        }
-
-        var authority = new SimpleGrantedAuthority("ROLE_" + rol);
+        String codigoRol = RolHelper.codigoRol(u);
+        Rol rol = rolRepository.findById(codigoRol)
+            .orElseThrow(() -> new IllegalStateException("No existe la configuración del rol " + codigoRol));
+        var authorities = new ArrayList<SimpleGrantedAuthority>();
+        rol.getPermisos().forEach(permiso ->
+            authorities.add(new SimpleGrantedAuthority(permiso.getIdPermiso())));
         return User.builder()
             .username(u.getEmail())
             .password(u.getContrasena())
@@ -56,7 +56,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             .accountExpired(false)
             .credentialsExpired(false)
             .accountLocked(false)
-            .authorities(List.of(authority))
+            .authorities(authorities)
             .build();
     }
 }

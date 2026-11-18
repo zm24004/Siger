@@ -52,7 +52,7 @@ public class JwtService {
     /**
      * Generates a signed JWT for the given subject (email) and rol claim.
      */
-    public String generar(String email, String rol) {
+    public String generarToken(String email, String rol) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMs);
         return Jwts.builder()
@@ -69,7 +69,7 @@ public class JwtService {
      *
      * @throws JwtException if the token is invalid or expired.
      */
-    public Claims leer(String token) {
+    public Claims validarToken(String token) {
         return Jwts.parser()
             .verifyWith(key)
             .build()
