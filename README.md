@@ -757,6 +757,7 @@ mvn spring-boot:run "-Dmaven.test.skip=true"
 cd .......\Siger\frontend
 npm run dev
 
+
 > debe aparecer:
 
 VITE v5.4.21 ready in 835 ms
