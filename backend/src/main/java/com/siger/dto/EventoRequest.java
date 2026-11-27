@@ -4,12 +4,14 @@ import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 public record EventoRequest(
     @NotBlank(message = "El nombre es obligatorio")
+    @Size(max = 200, message = "El nombre no puede superar 200 caracteres")
     String nombre,
 
     String descripcion,

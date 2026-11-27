@@ -2,6 +2,7 @@ package com.siger.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import lombok.AllArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -29,22 +30,19 @@ import org.springframework.stereotype.Component;
  * sees a closed socket rather than an unauthenticated session.</p>
  */
 @Component
+@AllArgsConstructor
 public class JwtChannelInterceptor implements ChannelInterceptor {
 
     private final JwtService jwtService;
-
-    public JwtChannelInterceptor(JwtService jwtService) {
-        this.jwtService = jwtService;
-    }
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
 
-        if (accessor.getCommand() != null
-                && StompCommand.CONNECT.equals(accessor.getCommand())) {
+        if (accessor.getCommand() != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
 
             String auth = accessor.getFirstNativeHeader("Authorization");
+
             if (auth == null || !auth.startsWith("Bearer ")) {
                 throw new MessagingException("Falta token de autenticación");
             }
@@ -52,7 +50,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
             String token = auth.substring("Bearer ".length());
             Claims claims;
             try {
-                claims = jwtService.leer(token);
+                claims = jwtService.validarToken(token);
             } catch (JwtException ex) {
                 throw new MessagingException("Token JWT inválido");
             }

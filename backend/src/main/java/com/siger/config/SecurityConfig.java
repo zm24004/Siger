@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -52,21 +53,23 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Public authentication endpoints
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/register",
+                    "/api/v1/auth/forgot-password",
+                    "/api/v1/public/**"
+                ).permitAll()
                 // WebSocket / STOMP handshake endpoint — the actual authentication
                 // happens at the STOMP CONNECT frame via JwtChannelInterceptor,
                 // so the HTTP handshake (and SockJS info/XHR) must be public.
-                .requestMatchers("/ws-notificaciones/**").permitAll()
-                // Public read-only access to events catalogue (collection + item + subpaths)
-                .requestMatchers(org.springframework.http.HttpMethod.GET,
-                    "/api/eventos", "/api/eventos/**").permitAll()
-                // Public list of locations (catalogue)
-                .requestMatchers(org.springframework.http.HttpMethod.GET,
-                    "/api/ubicaciones", "/api/ubicaciones/**").permitAll()
+                .requestMatchers("/api/v1/ws-notificaciones/**").permitAll()
+                // Public event catalogue and event details.
+                .requestMatchers(HttpMethod.GET, "/api/v1/eventos", "/api/v1/eventos/{id}").permitAll()
                 // User management is admin-only
-                .requestMatchers("/api/usuarios/**").hasRole("ADMINISTRADOR")
+                .requestMatchers("/api/v1/usuarios/**", "/api/v1/roles/**").authenticated()
                 // OpenAPI / Swagger
                 .requestMatchers(
+                    "/openapi.yml",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html"

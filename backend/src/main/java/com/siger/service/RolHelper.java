@@ -19,6 +19,15 @@ public final class RolHelper {
         throw new IllegalStateException("Tipo de usuario no soportado: " + u.getClass().getName());
     }
 
+    public static String codigoRol(Usuario usuario) {
+        return switch (derivarRol(usuario)) {
+            case "ADMINISTRADOR" -> "ADM";
+            case "ORGANIZADOR" -> "ORG";
+            case "PARTICIPANTE" -> "PAR";
+            default -> throw new IllegalStateException("Tipo de usuario no soportado.");
+        };
+    }
+
     /**
      * Generates a unique human-readable reservation code: "SIG-XXXXXXXX"
      * (8 chars from a UUID, uppercased).

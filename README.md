@@ -43,7 +43,7 @@ SIGER (Sistema de Gestión de Reservas En Linea) es una aplicación web para que
 | Seguridad     | Spring Security + JWT            | HS256, expiración configurable           |
 | Real-time     | Spring WebSocket (STOMP)         | Notificaciones de reserva                |
 | Base de datos | MySQL                            | 8.0.16+ (`utf8mb4_unicode_ci`)           |
-| Migraciones   | SQL script único                 | `database/siger.sql` (origen de verdad)  |
+| Base de datos | Scripts SQL                      | `database/siger.sql` (esquema) y `database/seed.sql` (semillas) |
 | Frontend      | React + Vite                     | React 18, Vite 5                         |
 | UI            | TailwindCSS + shadcn/ui          | Componentes accesibles                   |
 | Estado        | Zustand / Context API            | Sesión JWT en memoria + `localStorage`   |
@@ -60,7 +60,8 @@ SIGER (Sistema de Gestión de Reservas En Linea) es una aplicación web para que
 ```
 siger/
 ├── database/
-│   └── siger.sql                  # Script SQL único (12 tablas + 1 vista + seed)
+│   ├── siger.sql                  # Base de datos, tablas, índices y vista
+│   └── seed.sql                   # Datos semilla
 ├── backend/
 │   ├── Dockerfile                 # Multi-stage: maven build -> JRE runtime
 │   ├── .dockerignore
@@ -85,19 +86,19 @@ siger/
 ├── frontend/ (falta o no implementado todavia * )
 │   ├── Dockerfile *                # Multi-stage: node build -> nginx serve
 │   ├── .dockerignore *
-│   ├── nginx.conf                # SPA fallback + proxy /api
+│   ├── nginx.conf                # SPA fallback + proxy REST/SockJS API v1
 │   ├── package.jso
 │   ├── vite.config.ts
 │   └── src/
 │       ├── api/                   # cliente Axios + endpoints
 │       ├── components/            # UI reutilizable (shadcn/ui)
 │       ├── context/              # AuthContext, ToastContext
-│       ├── pages/                # Login, Eventos, MisReservas, Admin, Organizador
+│       ├── pages/                # páginas agrupadas por funcionalidad: publicas, autenticación, participante, organizador, administración, sistema
 │       ├── routes/               # Rutas protegidas
 │       └── lib/                  # utilidades, constantes
 ├── scripts/
 │   ├── run-dev.sh                # Levanta MySQL + backend + frontend en dev
-│   └── reset-db.sh               # Reinicia la base de datos desde siger.sql
+│   └── reset-db.sh                # Reinicia la BD y carga esquema y semillas
 ├── .github/workflows/ci.yml      # CI en GitHub Actions
 ├── .gitignore
 ├── .env.example                  # Plantilla de variables de entorno
@@ -152,8 +153,8 @@ Levanta solo la base de datos:
 docker compose up -d db
 ```
 
-- MySQL quedará en `localhost:${MYSQL_PORT:-3306}`.
-- En el **primer arranque**, `database/siger.sql` se ejecuta automáticamente desde `/docker-entrypoint-initdb.d/01-siger.sql`.
+- MySQL quedará en `localhost:${MYSQL_PORT:-3306}`; dentro de Compose, el backend conecta al puerto interno `db:3306`.
+- En el **primer arranque**, Compose ejecuta `database/siger.sql` como `01-siger.sql` y luego `database/seed.sql` como `02-seed.sql`.
 - Usuario de app: `siger_app` con password `MYSQL_PASSWORD`. Si necesitas crearlo manualmente (caso BD externa/local): 
 
 ```sql
@@ -194,16 +195,27 @@ Verificar: [http://localhost:8080/actuator/health](http://localhost:8080/actuato
 ### Desde VS Code
 Usa las tareas `Backend: Run (./mvnw spring-boot:run)` o configura `launch.json` con las variables anteriores.
 
+### Usuarios de pruba
+Se crean despues de levantar el backend por primera vez con sus respectivos roles y permisos segun los casos de uso
+
+|usuario email | contraseña | role |
+|---|---|---|
+|admin@siger.com|Admin123|ADMINISTRADOR|
+|organizador@siger.com|Organizador123|ORGANIZADOR|
+|participante1@siger.com|Participante123|PARTICIPANTE|
+|participante2@siger.com|Participante123|PARTICIPANTE|
+
+
 ### 3) Configurar y levantar el Frontend
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local   # VITE_API_URL=/api
+cp .env.example .env.local   # VITE_API_URL=http://localhost:8080/api/v1
 npm run dev                   # http://localhost:5173
 ```
 
-`vite.config.ts` proxea `/api` al backend en `http://localhost:8080`, evitando CORS en desarrollo. Puedes abrir `frontend/` en tu editor favorito y correr `npm run dev` desde la terminal integrada.
+`vite.config.ts` proxea `/api` (incluido `/api/v1`) al backend en `http://localhost:8080`, evitando CORS en desarrollo. Puedes abrir `frontend/` en tu editor favorito y correr `npm run dev` desde la terminal integrada.
 
 ---
 
@@ -224,7 +236,7 @@ npm run dev                   # http://localhost:5173
 | `SPRING_PROFILES_ACTIVE` | backend     | Perfil activo                         | `dev` / `prod`                   |
 | `SERVER_PORT`            | backend     | Puerto del backend                    | `8080`                           |
 | `SIGER_CORS_ORIGIN`      | backend     | Orígenes CORS permitidos (prod)       | `http://localhost:5173,http://localhost` |
-| `VITE_API_BASE_URL`      | frontend    | Ruta base de la API (relativa evita CORS) | `/api`                       |
+| `VITE_API_BASE_URL`      | frontend    | Ruta base de la API (relativa evita CORS) | `/api/v1`                       |
 | `VITE_APP_NAME`           | frontend    | Nombre de app (build arg)             | `SIGER`                          |
 | `FRONTEND_PORT`          | compose     | Puerto público del frontend           | `5173`                           |
 | `MYSQL_PORT`             | compose     | Puerto público de MySQL               | `3306`                           |
@@ -241,7 +253,7 @@ npm run dev                   # http://localhost:5173
 
 ## Levantar todo para simular entorno de producción (Docker Compose)
 
-Para simular un despliegue productivo, levanta **base de datos, backend y frontend juntos** con Docker. Se usan perfiles `prod`, build multi-stage, Nginx para el frontend, healthcheck en MySQL y `database/siger.sql` para inicializar la BD.
+Para simular un despliegue productivo, levanta **base de datos, backend y frontend juntos** con Docker. Se usan perfiles `prod`, build multi-stage, Nginx para el frontend, healthcheck en MySQL y los scripts `database/siger.sql` y `database/seed.sql` para inicializar la BD en ese orden.
 
 ### 1) Configurar variables
 Desde la raíz del repositorio:
@@ -272,7 +284,7 @@ SERVER_PORT=8080
 SIGER_CORS_ORIGIN=http://localhost:5173,http://localhost
 
 # Frontend
-VITE_API_BASE_URL=/api
+VITE_API_BASE_URL=/api/v1
 VITE_APP_NAME=SIGER
 FRONTEND_PORT=5173
 ```
@@ -296,13 +308,13 @@ docker compose up --build -d
 ```bash
 docker compose logs -f        # ver logs
 docker compose down          # parar conservando BD
-docker compose down -v       # parar y borrar volumen (re-ejecuta siger.sql)
+docker compose down -v       # parar y borrar volumen (re-ejecuta esquema y semillas)
 docker compose ps
 ```
 
 ### Notas rápidas
-- **Imagened docker Multi-stage:** Backend Maven→JRE (usuario no-root, healthcheck + `wait-for.sh`). Frontend Node→nginx con `nginx.conf` (SPA fallback + proxy `/api/` y `/ws-notificaciones/` con upgrade WS).
-- **Inicialización:** Solo primera vez del volumen, `database/siger.sql` se monta en `/docker-entrypoint-initdb.d/`.
+- **Imágenes Docker multi-stage:** Backend Maven→JRE (usuario no-root, healthcheck + espera de MySQL en el puerto interno 3306). Frontend Node→Nginx con fallback SPA y proxy de `/api/v1/` y `/api/v1/ws-notificaciones` hacia el backend.
+- **Inicialización:** Solo la primera vez del volumen se montan `/docker-entrypoint-initdb.d/01-siger.sql` y `/docker-entrypoint-initdb.d/02-seed.sql`; MySQL los ejecuta en orden alfabético.
 - **Perfiles:** En este modo se usa `prod` (`application-prod.yml` con `ddl-auto: none`, logs INFO, CORS por `SIGER_CORS_ORIGIN`).  
 
 ---
@@ -336,7 +348,7 @@ spring:
 - **No mezclar perfiles**: Para simular **producción con Docker**, usa **`SPRING_PROFILES_ACTIVE=prod`** (así `application-prod.yml` aplica). Para desarrollo con BD local + backend/frontend corriendo fuera de Docker, usa **`SPRING_PROFILES_ACTIVE=dev`**.
 - **Secretos**: Nunca commitees `.env`. Usa `.env.example` como plantilla.
 - **CORS**: En `dev` está fijo a `http://localhost:5173`. En `prod` usa `${SIGER_CORS_ORIGIN}` para permitir orígenes según despliegue.
-- **Migraciones**: Actualmente se usa **SQL script único** `database/siger.sql` (no Flyway/Liquibase activo). Por eso `ddl-auto: none` en prod es correcto para evitar desajustes con el esquema existente.
+- **Esquema y datos**: Se usan `database/siger.sql` para crear la base de datos y el esquema y `database/seed.sql` para los datos iniciales (no Flyway/Liquibase). Por eso `ddl-auto: none` en prod es correcto para evitar desajustes con el esquema existente.
 
 > **Nota sobre `application.properties` vs `.yml`:** El repo usa principalmente `.yml` para perfiles. El `application.yml` base está en YAML; sigue siendo perfectamente válido y legible. Lo importante es entender el **orden de carga** y la **inyección por variables** para pasar fácilmente entre dev local y dockerizado (simulando producción).
 
@@ -344,24 +356,28 @@ spring:
 
 ## Esquema de base de datos
 
-Definido en `database/siger.sql` (origen de verdad único, 12 tablas):
+Definido en `database/siger.sql` (16 tablas: 12 del dominio y 4 de autorización):
 
-| #   | Tabla           | Tipo                            |
-| --- | --------------- | ------------------------------- |
-| 1   | `usuario`       | Base de herencia JOINED         |
-| 2   | `administrador` | Subtipo de `usuario`            |
-| 3   | `organizador`   | Subtipo de `usuario`            |
-| 4   | `participante`  | Subtipo de `usuario`            |
-| 5   | `categoria`     | Catálogo                        |
-| 6   | `evento`        | Entidad principal               |
-| 7   | `sede`          | Catálogo                        |
-| 8   | `sesion`        | Horarios por evento             |
-| 9   | `reserva`       | Inscripción participante-sesión |
-| 10  | `notificacion`  | Mensajes a usuario              |
-| 11  | `auditoria`     | Bitácora de cambios             |
-| 12  | `configuracion` | Params globales                 |
+| #   | Tabla             | Tipo                                    |
+| --- | ----------------- | --------------------------------------- |
+| 1   | `rol`             | Roles de autorización                  |
+| 2   | `permiso`         | Permisos configurables                  |
+| 3   | `rol_permiso`     | Relación entre roles y permisos        |
+| 4   | `jwt_revocado`    | Tokens JWT revocados                   |
+| 5   | `usuario`         | Base de herencia JOINED                |
+| 6   | `administrador`   | Subtipo de `usuario`                   |
+| 7   | `organizador`     | Subtipo de `usuario`                   |
+| 8   | `participante`    | Subtipo de `usuario`                   |
+| 9   | `ubicacion`       | Ubicaciones de eventos                 |
+| 10  | `evento`          | Entidad principal                      |
+| 11  | `reservacion`     | Reservas de participantes              |
+| 12  | `asistencia`      | Asistencia a reservaciones             |
+| 13  | `recurso`         | Recursos disponibles                   |
+| 14  | `evento_recurso`  | Relación entre eventos y recursos      |
+| 15  | `reporte`         | Reportes administrativos               |
+| 16  | `notificacion`    | Mensajes a usuario                     |
 
-Más 1 vista (`vw_resumen_eventos`) y datos semilla (usuarios, categorías, sede demo).
+Más 1 vista (`vw_eventos_disponibles`). Los datos de demostración se encuentran en `database/seed.sql`.
 
 Convenciones:
 
@@ -417,7 +433,7 @@ Base path: `/api`. Autenticación vía `Authorization: Bearer <JWT>` salvo en `/
 
 ### WebSocket (STOMP)
 
-- Endpoint: `/ws-notificaciones` (SockJS)
+- Endpoint: `/api/v1/ws-notificaciones` (SockJS)
 - Topic: `/topic/notificaciones/{userId}` — notificaciones en tiempo real al usuario.
 
 ### Utilidad
@@ -432,7 +448,7 @@ Base path: `/api`. Autenticación vía `Authorization: Bearer <JWT>` salvo en `/
 
 | Sprint | Objetivo                                                          | Entregable                                                   |
 | ------ | ----------------------------------------------------------------- | ------------------------------------------------------------ |
-| S0     | Setup repo, Docker, CI, esquema DB                                | Este repo + `siger.sql` levantándose con `docker compose up` |
+| S0     | Setup repo, Docker, CI, esquema DB                                | Este repo + esquema y semillas cargados con `docker compose up` |
 | S1     | Auth JWT + login UI + sesión React                                | `/auth/login`, `AuthContext`, rutas protegidas               |
 | S2     | CRUD eventos (organizador) + catálogo público                     | `/eventos`, formulario creación, lista pública               |
 | S3     | Reservas + cupos + WebSockets de notificación                     | `/reservas`, `/ws-notificaciones`, panel "Mis reservas"      |
@@ -521,7 +537,7 @@ Reiniciar el backend. Si usas Docker, asegúrate de que `MYSQL_PASSWORD` y `DB_P
 ### 3. El frontend no llega al backend (CORS)
 
 **Causa:** Spring no permite el origen de Vite.
-**Solución:** Verificar `CorsConfig` permite `http://localhost:5173` en perfil dev. El `nginx.conf` del frontend también hace proxy de `/api` a `backend:8080`, evitando CORS en producción.
+**Solución:** En desarrollo local, verificar `CorsConfig` permite `http://localhost:5173`. En Docker, el navegador consume `/api/v1` en el mismo origen y Nginx lo proxea a `backend:8080`, evitando CORS.
 
 ### 4. `Public Key Retrieval is not allowed`
 
@@ -559,7 +575,7 @@ Matar el proceso o cambiar el mapeo en `docker-compose.yml` (p. ej. `8081:8080`)
 ### 8. WebSockets no conectan
 
 **Causa:** Proxy/nginx corta upgrade de protocolo.
-**Solución:** En nginx.conf del frontend, asegurarse de que `proxy_set_header Upgrade $http_upgrade;` y `Connection "upgrade";` están presentes para `/ws-notificaciones`. En dev local, Vite proxy debe tener `ws: true`.
+**Solución:** El endpoint es `/api/v1/ws-notificaciones`; Nginx debe conservar ese prefijo y configurar los encabezados de upgrade. En desarrollo local, el proxy Vite debe tener `ws: true`.
 
 ### 9. `JWT signature does not match`
 
@@ -591,8 +607,16 @@ que recargue la página).
 4. Spring resuelve el destino del usuario → `/user/queue/notificaciones` → el cliente
    recibe el frame, incrementa el contador de no leídas y muestra un _toast_.
 5. Si no hay cliente conectado, el push es _no-op_ (la notificación queda en BD y se ve
-   vía `GET /api/notificaciones/mis`). El push está envuelto en `try/catch` para que un
+   vía `GET /api/notificaciones/mis/pagina`. El historial se pagina con cursor estable
+   (fecha e ID) y tamaño máximo de 50; `GET /api/notificaciones/mis` se conserva por
+   compatibilidad. El contador global se consulta por separado en
+   `GET /api/notificaciones/mis/no-leidas`; en el panel se pueden cargar más resultados
+   sin sustituir los ya mostrados. El push está envuelto en `try/catch` para que un
    fallo de WS **nunca** rompa la reservación.
+   El esquema de instalaciones existentes debe incluir el índice
+   `idx_notificacion_usuario_fecha_id` sobre `(idUsuario, fechaEnvio, idNotificacion)`
+   para mantener eficiente la consulta por cursor; el esquema nuevo ya lo declara en
+   `database/siger.sql`.
 
 ### Archivos
 
@@ -654,7 +678,7 @@ Las esenciales:
 ### Flujo de trabajo típico
 
 1. **Abrir el proyecto:** `code siger/` (o _File → Open Folder_ sobre la carpeta `siger`).
-2. **(Solo la primera vez) Cargar la BD:** ejecuta la tarea **"DB: Reset (cargar siger.sql)"** o desde terminal `mysql -u root -p < database/siger.sql`.
+2. **(Solo la primera vez) Cargar la BD:** ejecuta `./scripts/reset-db.sh` o importa, en orden, `database/siger.sql` y `database/seed.sql`.
 3. **(Solo la primera vez) Instalar dependencias del frontend:** tarea **"Frontend: Install (npm install)"**.
 4. **Arrancar el backend:** `F5` (debug con breakpoints) o tarea **"Backend: Run (./mvnw spring-boot:run)"**. La API queda en `http://localhost:8080`.
    > Las tareas usan `./mvnw` (wrapper de Maven incluido en `backend/`); la primera vez descarga Maven 3.9.9 (~10 MB) y lo cachea en `~/.m2/wrapper/`. **No necesitas Maven instalado** en el sistema.
