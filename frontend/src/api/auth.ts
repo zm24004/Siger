@@ -18,12 +18,12 @@ export class AuthService {
     return this.httpClient.post<LoginAuthUserResponse>('/auth/login', data);
   }
 
-  /** POST /api/auth/registro
+  /** POST /api/auth/register
    *  Body: { nombre, apellido, email, telefono, codigoPais, contrasena, rol }
    *  Response: { token, nombre, apellido, rol, idUsuario }
    */
   async registroPost(data: RegisterUserPayload): Promise<LoginAuthUserResponse> {
-    return this.httpClient.post<LoginAuthUserResponse>('/auth/registro', data);
+    return this.httpClient.post<LoginAuthUserResponse>('/auth/register', data);
   }
 
   /** POST /api/auth/recuperar-contrasena

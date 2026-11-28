@@ -76,26 +76,6 @@ export const MobileNavMenu = ({
                     </>
                 )}
 
-                {isAuthenticated && rol === "ORGANIZADOR" && (
-                    <>
-                        <NavLink to="/organizador" className={linkClassName} end onClick={closeMenu}>
-                            Mi panel
-                        </NavLink>
-                        <NavLink to="/organizador/nuevo-evento" className={linkClassName} onClick={closeMenu}>
-                            Crear evento
-                        </NavLink>
-                        <NavLink to="/organizador/asistencia" className={linkClassName} onClick={closeMenu}>
-                            Asistencia
-                        </NavLink>
-                    </>
-                )}
-
-                {isAuthenticated && rol === "ADMINISTRADOR" && (
-                    <NavLink to="/admin" className={linkClassName} onClick={closeMenu}>
-                        Admin
-                    </NavLink>
-                )}
-
                 {isAuthenticated ? (
                     <>
                         <Link

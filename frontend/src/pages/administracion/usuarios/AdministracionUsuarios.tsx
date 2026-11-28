@@ -7,6 +7,9 @@ import { useToast } from '../../../context/ToastContext';
 import { Table } from '../../../components/untitledui/application/table/table';
 import { PaginationPageDefault } from '../../../components/untitledui/application/pagination/pagination';
 import type { Paginado } from '../../../interfaces/common';
+import { useAuth } from '@/context/AuthContext';
+import { Link } from 'react-router-dom';
+import { UserPlus } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -34,6 +37,7 @@ export const AdministracionUsuarios = () => {
   const [usuariosActualizando, setUsuariosActualizando] = useState<Set<number>>(
     () => new Set(),
   );
+  const { usuario: loggedUser } = useAuth();
   const { error: mostrarError, exito: mostrarExito } = useToast();
 
   useEffect(() => {
@@ -97,9 +101,18 @@ export const AdministracionUsuarios = () => {
     <section className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8" aria-labelledby="admin-users-title">
       <header className="mb-6">
         <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">Gestión del sistema</p>
-        <h1 id="admin-users-title" className="mt-1 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-          Administración de usuarios
-        </h1>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-4">
+          <h1 id="admin-users-title" className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+            Administración de usuarios
+          </h1>
+          <Link
+            to="/admin/usuarios/nuevo"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          >
+            <UserPlus size={18} aria-hidden="true" />
+            Agregar usuario
+          </Link>
+        </div>
       </header>
 
       <div className="mb-5 grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:grid-cols-2">
@@ -202,7 +215,7 @@ export const AdministracionUsuarios = () => {
                             : 'bg-blue-700 text-white hover:bg-blue-800'
                         }`}
                         onClick={() => cambiarEstadoUsuario(u, activo)}
-                        disabled={actualizando}
+                        disabled={actualizando || u.idUsuario == loggedUser?.idUsuario}
                         aria-label={`${activo ? "Desactivar" : "Activar"} a ${nombreCompletoFila}`}
                       >
                         {actualizando ? "Actualizando..." : activo ? "Desactivar" : "Activar"}

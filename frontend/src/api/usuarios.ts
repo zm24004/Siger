@@ -10,6 +10,10 @@ export class UsuarioService {
     this.httpClient = httpClient;
   }
 
+  async crearUsuario(data: UsuarioCreatePayload): Promise<Usuario> {
+    return this.httpClient.post<Usuario>('/usuarios', data);
+  }
+
   /** GET /api/usuarios (ADMINISTRADOR). */
   async getUsuarios(filters: UsuarioPaginadoParams): Promise<Paginado<Usuario>> {
     const params = new URLSearchParams();
@@ -53,3 +57,15 @@ export class UsuarioService {
 }
 
 export const usuarioService = new UsuarioService(httpClient);
+
+export type UsuarioCreateRole = 'ADM' | 'ORG' | 'PAR';
+
+export interface UsuarioCreatePayload {
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  codigoPais: string;
+  contrasena: string;
+  rol: UsuarioCreateRole;
+}
