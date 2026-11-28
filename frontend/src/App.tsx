@@ -27,6 +27,7 @@ import './styles/panel.css';
 import { CustomNavBar } from './components/navbar/CustomNavBar';
 import { PopularEvents } from './pages/publicas/PopularEvents';
 import { AdministracionUsuarios } from './pages/administracion/usuarios/AdministracionUsuarios';
+import CrearUsuario from './pages/administracion/usuarios/CrearUsuario';
 import { AdministracionEventos } from './pages/administracion/eventos/AdministracionEventos';
 import Sidebar from './components/Sidebar';
 import { useAuth } from './context/AuthContext';
@@ -127,6 +128,14 @@ export default function App() {
             element={
               <RutaProtegida roles={['ADMINISTRADOR']}>
                 <AdministracionUsuarios />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/admin/usuarios/nuevo"
+            element={
+              <RutaProtegida roles={['ADMINISTRADOR']}>
+                <CrearUsuario />
               </RutaProtegida>
             }
           />

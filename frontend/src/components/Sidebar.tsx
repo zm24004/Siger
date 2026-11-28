@@ -9,6 +9,7 @@ import {
   Plus,
   Settings,
   Users,
+  UserPlus,
   X,
 } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -144,6 +145,7 @@ export default function Sidebar() {
                 <div id="admin-system-submenu" className="ml-5 grid gap-1 border-l border-white/20 pl-3">
                   <NavLink
                     to="/admin/usuarios"
+                    end
                     className={({ isActive }) =>
                       `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                         isActive
@@ -154,6 +156,19 @@ export default function Sidebar() {
                   >
                     <Users size={17} aria-hidden="true" />
                     <span>Administración de usuarios</span>
+                  </NavLink>
+                  <NavLink
+                    to="/admin/usuarios/nuevo"
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-(--color-primario) font-semibold !text-white shadow-sm'
+                          : '!text-white/70 hover:bg-white/10 hover:!text-white'
+                      }`
+                    }
+                  >
+                    <UserPlus size={17} aria-hidden="true" />
+                    <span>Agregar usuario</span>
                   </NavLink>
                   <NavLink
                     to="/admin/eventos"
