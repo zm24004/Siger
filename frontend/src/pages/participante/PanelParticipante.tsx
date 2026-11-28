@@ -112,14 +112,14 @@ export default function PanelParticipante() {
             </span>
           </div>
         </div>
-        <Link to="/eventos" className="btn btn-primary btn-sm">Ver catálogo</Link>
+        <Link to="/eventos-publicos" className="btn btn-primary btn-sm">Ver catálogo</Link>
       </header>
 
       <section className="panel-stats" aria-label="Resumen">
         <div className="stat-card">
           <span className="stat-label">Próximos eventos</span>
           <span className="stat-valor">{catalogo?.length}</span>
-          <Link to="/eventos" className="stat-link">Explorar →</Link>
+          <Link to="/eventos-publicos" className="stat-link">Explorar →</Link>
         </div>
         <div className="stat-card stat-card-exito">
           <span className="stat-label">Mis reservas</span>
@@ -142,7 +142,7 @@ export default function PanelParticipante() {
           <div className="estado-vacio estado-vacio-sm">
             <h3>Aún no tienes reservas activas</h3>
             <p>Cuando reserves un evento aparecerá aquí con su código y fecha.</p>
-            <Link to="/eventos" className="btn btn-primary btn-sm">Ver eventos disponibles</Link>
+            <Link to="/eventos-publicos" className="btn btn-primary btn-sm">Ver eventos disponibles</Link>
           </div>
         ) : (
           <ul className="panel-lista">

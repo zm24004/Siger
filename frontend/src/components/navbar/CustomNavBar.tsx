@@ -52,23 +52,6 @@ export const CustomNavBar = () => {
                     }
 
                     {
-                        isAuthenticated && rol === 'ORGANIZADOR' && (
-                            <>
-                                <NavLink to="/organizador" className="navbar-link" end>Mi panel</NavLink>
-                                <NavLink to="/organizador/nuevo-evento" className="navbar-link">Crear evento</NavLink>
-                                <NavLink to="/organizador/asistencia" className="navbar-link">Asistencia</NavLink>
-                            </>
-                        )
-                    }
-
-                    {
-                        isAuthenticated && rol === 'ADMINISTRADOR' && (
-                            <NavLink to="/admin" className="navbar-link">Admin</NavLink>
-                        )
-                    }
-
-
-                    {
                         isAuthenticated &&
                         (<>
                             <Link to={panelPath} className="py-4 px-1 relative border-2 border-transparent text-gray-800 rounded-full hover:text-gray-400 focus:outline-none focus:text-gray-500 transition duration-150 ease-in-out" aria-label="Cart">
